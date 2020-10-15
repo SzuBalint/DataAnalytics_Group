@@ -44,6 +44,8 @@ library(rnaturalearthdata)
 library(mosaic)
 library(ggthemes)
 library(GGally)
+library(skimr)
+
 
 theme_set(theme_minimal())
 theme_update(axis.line = element_line(colour = "#C8102E"))
@@ -70,6 +72,80 @@ athens_data <- read_csv("data/listings.csv")
 
 glimpse(athens_data)
 ```
+
+## Cleaning the data 
+
+
+```{r}
+skim(athens_data)
+```
+
+Based on our initial data analysis we identified 4 major types of variables in the underlying data set: 
+
+1) Character values: 47
+2) Date values: 5
+3) Logical values: 15
+4) Numeric values: 39
+
+We also have seen that we have 11,314 observations (apartments) & a total of 106 data points per apartment. 
+
+
+### Reducing the dataset 
+
+We identified many variables that have a characteristic which make it either not interesting to analyze (only one/ very few distinct values, text strings) or are not used in the analysis later on. 
+
+So we excluded these columns/ data points in order to make the data easier & faster to handle.
+
+
+```{r}
+athens_data_red <- athens_data %>% 
+    #Select the relevant variables
+  select(
+         id,
+         neighbourhood,
+         zipcode,
+         latitude,
+         longitude,
+         property_type,
+         room_type,
+         accommodates,
+         bathrooms,
+         bedrooms,
+         beds,
+         price,
+         security_deposit,
+         cleaning_fee,
+         guests_included,
+         extra_people,
+         minimum_nights,
+         maximum_nights,
+         availability_365,
+         number_of_reviews_ltm,
+         review_scores_rating,
+         review_scores_checkin,
+         review_scores_cleanliness,
+         review_scores_accuracy,
+         review_scores_communication,
+         review_scores_location,
+         review_scores_value,
+         cancellation_policy,
+         reviews_per_month,
+         host = host_id, 
+         host_response_time,
+         host_response_rate,
+         host_acceptance_rate,
+         host_is_superhost,
+         host_listings_count,
+         host_total_listings_count,
+         host_identity_verified,number_of_reviews,
+         host_instant_booking =  instant_bookable,
+  )
+
+
+```
+
+
+We now only have 39 columns left, which make the data set easier to handle. In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
 
 
 ```{r setup, include=FALSE}
