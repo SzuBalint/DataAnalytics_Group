@@ -92,7 +92,7 @@ We also have seen that we have 11,314 observations (apartments) & a total of 106
 
 ### Reducing the dataset 
 
-We identified many variables that have a characteristic which make it either not interesting to analyze (only one/ very few distinct values, text strings) or are not used in the analysis later on. 
+We identified many variables that have a characteristic which make it either not interesting to analyze (only one/ very few distinct values, text strings) or that we think we will not use in the analysis later on. 
 
 So we excluded these columns/ data points in order to make the data easier & faster to handle.
 
@@ -113,6 +113,8 @@ athens_data_red <- athens_data %>%
          bedrooms,
          beds,
          price,
+         weekly_price,
+         monthly_price,
          security_deposit,
          cleaning_fee,
          guests_included,
@@ -141,11 +143,49 @@ athens_data_red <- athens_data %>%
          host_instant_booking =  instant_bookable,
   )
 
+```
+
+
+We now only have 41 columns left, which make the data set easier to handle. 
+
+### Adjust data values
+
+In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
+
+* We transform the price, security deposit, cleaning fee, host response rate and host acceptance rate from character variables to numeric ones
+* We create factor variables for Property type, room types, cancellation policy and host response time 
+
+
+```{r}
+
+# Transform character values to numeric values
+athens_data_clean <- athens_data_red %>% 
+   mutate(
+     price = as.numeric(str_remove_all(price, "[$ ,]")),
+     weekly_price = as.numeric(str_remove_all(weekly_price, "[$ , ]")),
+     monthly_price = as.numeric(str_remove_all(monthly_price, "[$ ,]")),
+     cleaning_fee = as.numeric(str_remove_all(cleaning_fee, "[$ ,]")),
+     host_response_rate = as.numeric(str_remove_all(cleaning_fee, "[% ,]")),
+     host_acceptance_rate = as.numeric(str_remove_all(cleaning_fee, "[% ,]"))
+     )
+
+# Create factor variables for room types 
+room_types <- unique(athens_data_clean$room_type)
+athens_data_clean$room_type <- factor(athens_data_clean$room_type, labels = room_types)
+
+# Create factor variables for cancellation policies 
+cancellation_policies <- unique(athens_data_clean$cancellation_policy)
+athens_data_clean$cancellation_policy <- factor(athens_data_clean$cancellation_policy, labels = cancellation_policies)
+
+# Create factor variables for host response time 
+
+
+
+
 
 ```
 
 
-We now only have 39 columns left, which make the data set easier to handle. In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
 
 
 ```{r setup, include=FALSE}
