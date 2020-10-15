@@ -1,0 +1,111 @@
+---
+title: "Project"
+author: "Szutor Bálint"
+date: '2020 október 13 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(igraph)
+library(ggmap)
+library(geosphere)
+library(OpenStreetMap)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+theme_set(theme_minimal())
+theme_update(axis.line = element_line(colour = "#C8102E"))
+theme_update(axis.text.x = element_text(colour= "#001E62",
+                                 size = 10,
+                                 family = "Arial"))
+
+# Data
+athens_data <- read_csv("data/listings.csv")
+
+glimpse(athens_data)
+
+# Remove dollar sign and commas from the data 
+athens_data <- athens_data %>% 
+  mutate(price = as.numeric(str_remove_all(price, "[$ ,]")),
+         weekly_price = as.numeric(str_remove_all(weekly_price, "[$ , ]")),
+         monthly_price = as.numeric(str_remove_all(monthly_price, "[$ ,]")),
+         cleaning_fee = as.numeric(str_remove_all(cleaning_fee, "[$ ,]")))
+
+# Quick plot to see outliers
+athens_data %>% 
+  ggplot(aes(x = price)) +
+  geom_histogram() +
+  labs(title= "Distribution of prices in our original data")
+# Looks very scewed, probably a log-normal distribution, use log -> normal
+
+athens_data %>% 
+  ggplot(aes(x = log(price))) +
+  geom_histogram()
+
+# There seem to be a few outliers. We will remove them using the IQR method, becauses we belive that keeping those values would skew our analysis
+IQR.outliers <- function(x) {
+  Q3 <- quantile(x,0.95)
+  Q1 <- quantile(x,0.05)
+  IQR <- (Q3-Q1)
+  left <- (Q1-(1.5*IQR))
+  right <- (Q3+(1.5*IQR))
+  print(c(left, right))
+  c(x[x <left],x[x>right])
+}
+
+# Print outliers
+IQR.outliers(athens_data$price)
+
+athens_data %>% 
+  filter(!(price %in% IQR.outliers(athens_data$price))) %>% 
+  ggplot(aes(x = log(price))) +
+  geom_histogram()
+
+# Quick model
+summary(lm(as.numeric(reviews_per_month) ~ as.numeric(review_scores_rating), data = athens_data))
+
+# Create a custom theme for our plots
+theme_set(theme_minimal())
+```
+
+
+```{r}
+# Plot our airbnbs
+qmplot(longitude, latitude, data = athens_data %>% filter(!(price %in% IQR.outliers(athens_data$price))), color = price)
+
+# City borders coordinates
+athens <- c(c(38.11295, 37.878105), 
+            c(23.578729, 23.901406))
+
+# Syntagma coordinates
+syntagma <- c(37.975344, 23.735511)
+
+# Get world map
+world <- ne_countries(scale = "medium", returnclass = "sf", country="greece")
+
+openmap(c(23.578729, 23.901406),
+        c(38.11295, 37.878105),
+        type = "nps")
+
+plot(AustraliaMap)
+
+# Calculate distance between coordinates
+distm(c(lon1, lat1), c(lon2, lat2), 
+      fun = distHaversine)
+
+# THis is not working
+ggplot(data = world) +
+    geom_sf() +
+    geom_point(data = athens_data, aes(x = longitude, y = latitude), size = 4, 
+        shape = 23, fill = "darkred")  +
+    coord_sf(xlim = c(23.578729, 23.901406), 
+             ylim = c(37.878105, 38.11295), 
+             expand = FALSE)
+
+
+
+```
+
