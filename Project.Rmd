@@ -152,12 +152,11 @@ We now only have 41 columns left, which make the data set easier to handle.
 
 In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
 
-* We transform the price, security deposit, cleaning fee, host response rate and host acceptance rate from character variables to numeric ones
+* We transform the price, weekly price, monthly price, security deposit, cleaning fee, extra people, host response rate and host acceptance rate from character variables to numeric ones
 * We create factor variables for Property type, room types, cancellation policy and host response time 
 
 
 ```{r}
-
 # Transform character values to numeric values
 athens_data_clean <- athens_data_red %>% 
    mutate(
@@ -165,10 +164,15 @@ athens_data_clean <- athens_data_red %>%
      weekly_price = as.numeric(str_remove_all(weekly_price, "[$ , ]")),
      monthly_price = as.numeric(str_remove_all(monthly_price, "[$ ,]")),
      cleaning_fee = as.numeric(str_remove_all(cleaning_fee, "[$ ,]")),
+     security_deposit = as.numeric(str_remove_all(security_deposit, "[$ ,]")),
+     extra_people = as.numeric(str_remove_all(extra_people, "[$ ,]")),
      host_response_rate = as.numeric(str_remove_all(cleaning_fee, "[% ,]")),
      host_acceptance_rate = as.numeric(str_remove_all(cleaning_fee, "[% ,]"))
      )
+```
 
+
+```{r}
 # Create factor variables for room types 
 room_types <- unique(athens_data_clean$room_type)
 athens_data_clean$room_type <- factor(athens_data_clean$room_type, labels = room_types)
@@ -178,13 +182,74 @@ cancellation_policies <- unique(athens_data_clean$cancellation_policy)
 athens_data_clean$cancellation_policy <- factor(athens_data_clean$cancellation_policy, labels = cancellation_policies)
 
 # Create factor variables for host response time 
+athens_data_clean <- athens_data_clean %>% 
+  mutate(host_response_time = fct_relevel(host_response_time,
+                                            "within an hour", 
+                                            "within a few hours",
+                                            "within a day",
+                                            "a few days or more",
+                                            ))
+```
 
+
+The issue with the property types is that there are to much in order to generate reasonable factors. We need to analyze how much the share of each category. Best case would be that the majority of the property type share is done with a small number. If that is the case we can just summarize the rest in a new category calles "other".
+
+
+```{r}
+# Identify the amount of each property type
+most_com_properties <- athens_data_clean %>%
+    count(property_type) %>%
+    mutate(percentage = n/sum(n)*100)%>%
+    arrange(desc(n))
+
+most_com_properties
+```
+
+As the 5 most common property types account for ~95% of the total share we can just focus on them and summarize the rest in "Others"
+
+
+```{r}
+
+# First we need to summarize the other values in the Category "Others"
+athens_data_clean <- athens_data_clean %>% 
+  mutate(
+    property_type = case_when(
+      property_type %in% c("Apartment","House", "Condominium","Serviced Apartment", "Loft") 
+      ~ property_type, 
+      TRUE ~ "Other"))
+    
+
+# In a next step we can make a factor out of the 6 pre-defined categories    
+athens_data_clean <- athens_data_clean %>% 
+  mutate(
+     property_type = fct_relevel(property_type,
+                                        "Apartment",
+                                        "House",
+                                        "Condominium",
+                                        "Serviced Apartment",
+                                        "Loft",
+                                        "Other"))
+
+```
+
+
+We now have transformed the data types of the most variables in order to make the data set even cleaner. 
+
+### Readjust NA values 
+
+In a next step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
+
+* If no weekly price -> no discount -> we will insert the daily price multiplied by 7
+* If no monthly price -> no discount -> we will insert the daily price multiplied by 30
+* If no security deposit/ cleaning fee -> no fee -> we will insert 0
+
+
+```{r}
 
 
 
 
 ```
-
 
 
 
