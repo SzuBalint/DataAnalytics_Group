@@ -140,7 +140,7 @@ athens_data_red <- athens_data %>%
          host_listings_count,
          host_total_listings_count,
          host_identity_verified,number_of_reviews,
-         host_instant_booking =  instant_bookable,
+         host_instant_booking =  instant_bookable
   )
 
 ```
@@ -316,40 +316,90 @@ athens_data_final <- athens_data_clean %>%
 As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
 
 
-```{r}
+```{r Syntagma distance}
 # Plot our airbnbs
-qmplot(longitude, latitude, data = athens_data_final), color = price)
-
-# City borders coordinates
-athens <- c(c(38.11295, 37.878105), 
-            c(23.578729, 23.901406))
+qmplot(longitude, latitude, data = athens_data_final, color = price)
 
 # Syntagma coordinates
-syntagma <- c(37.975344, 23.735511)
+syntagma <- c(37.975344, 23.73472)
+names(syntagma) <- c("longitude", "latitude")
 
-# Get world map
-world <- ne_countries(scale = "medium", returnclass = "sf", country="greece")
+# Athene map
+athens_map = get_map(location=c(23.68,
+                                37.945,
+                                23.8,
+                                38.035), maptype="terrain-background")
 
-openmap(c(23.578729, 23.901406),
-        c(38.11295, 37.878105),
-        type = "nps")
+athens_map <- ggmap(athens_map)
 
-plot(AustraliaMap)
+# We dont want to see the axis when we are ploting maps
+map_theme <-  theme(axis.title.x=element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.ticks.x=element_blank(),
+                    axis.title.y=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.ticks.y=element_blank())
+
+# Plot the map and Syntagma, is there a connection between prices and the centre?
+athens_map +
+  geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = price)) +
+  geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), 
+             color = 'red', size = 5) +
+  theme_minimal() +
+  map_theme +
+  labs(title="Airbnbs around the centre seem to be more expensive", 
+       subtitle = "Centre - Syntagma Square")
+
+
+# Now that we assume that there is a connection, we calculate the distance for each airbnb
 
 # Calculate distance between coordinates
 distm(c(lon1, lat1), c(lon2, lat2), 
       fun = distHaversine)
 
-# THis is not working
-ggplot(data = world) +
-    geom_sf() +
-    geom_point(data = athens_data, aes(x = longitude, y = latitude), size = 4, 
-        shape = 23, fill = "darkred")  +
-    coord_sf(xlim = c(23.578729, 23.901406), 
-             ylim = c(37.878105, 38.11295), 
-             expand = FALSE)
+head(athens_data_final)
+
+athens_data_final<- athens_data_final %>% 
+  rowwise() %>% 
+  mutate(
+    cent_dist = distm(c(latitude, longitude), c(37.975344, 23.73472), 
+                      fun = distHaversine)[1,1]
+  )
+
+# Test if our numbers are correct visually
+athens_map +
+  geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = cent_dist)) +
+  geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), color = 'red', size = 5) +
+  theme_minimal() +
+  map_theme
+```
 
 
+```{r Room type}
+# How many room types are there?
+length(unique(athens_data_final$room_type))
 
+avg_dist <- athens_data_final %>% 
+  group_by(neighbourhood) %>% 
+  summarise(
+    avg_dist = mean(cent_dist)
+  ) %>% 
+  arrange(-avg_dist)
+
+athens_data_final %>% 
+  filter(!is.na(neighbourhood)) %>% 
+  select(neighbourhood,
+         room_type) %>% 
+  group_by(neighbourhood,
+           room_type) %>% 
+  summarise(n = n()) %>% 
+  mutate(perc = n/sum(n)) %>% 
+  ggplot(aes(fill=room_type, x=perc, y=factor(neighbourhood,levels = avg_dist$neighbourhood))) + 
+    geom_bar(position="fill", stat="identity") +
+  labs(title="Average distance from the centre does not seem to impact room types",
+       subtitle = "Average distance in decreasing order") +
+  ylab("") +
+  xlab("") +
+  guides(fill=guide_legend(title="Room types"))
 ```
 
