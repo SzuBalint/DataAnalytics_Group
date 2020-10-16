@@ -466,25 +466,25 @@ model1 %>% AIC() # 13195
 
 # Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
 
-model2 <- lm(log(price) ~ accommodates + bedrooms, data=train)
+model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, data=train)
 
 summary(model2) 
 summary(model2)$r.squared
 
-model2 %>% AIC() # 13479
+model2 %>% AIC() # 13071
 
 # Both the r2 and the AIC is smaller with this model, which means that the previous one would be prefered
 
-model2 <- lm(log(price) ~ accommodates + cent_dist, data=train)
+model2 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=train)
 
 summary(model2) 
 summary(model2)$r.squared
 
-model2 %>% AIC() # 12580
+model2 %>% AIC() # 12218
 
 # Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
 
-model3 <- lm(log(price) ~ accommodates + cent_dist + room_type, data=train)
+model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type, data=train)
 
 summary(model3) 
 summary(model3)$r.squared
@@ -497,11 +497,39 @@ train %>%
   ggplot(aes(x = review_scores_rating, y = price)) +
   geom_point()
 
-model3 <- lm(log(price) ~ accommodates + cent_dist + room_type + bedrooms + bathrooms + review_scores_rating + host_is_superhost, data=train)
+model4 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type + bedrooms + bathrooms + review_scores_rating, data=train)
 
-summary(model3) 
-summary(model3)$r.squared
+summary(model4) 
+summary(model4)$r.squared
 
-model3 %>% AIC() # 11907
+model4 %>% AIC() # 7056
+
+ggplot(model4, aes(x = .fitted, y = .resid)) + 
+  geom_point() +
+  labs(title = "Residuals vary around zero") +
+  ylab("Residual") +
+  xlab("")
+```
+
+## Error analysis
+
+```{r}
+# Choose models with the lowest MSPE (mean squared prediction error)
+
+# Model 1
+mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
+# Model 2
+mean((log(test$price) - predict.lm(model2, test)) ^ 2, na.rm=T)
+# Model 3
+mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
+# Model 4
+mean((log(test$price) - predict.lm(model4, test)) ^ 2, na.rm=T)
+```
+
+```{r}
+full.model <- lm(log(price) ~., data = train)
+
+step.model <- stepAIC(full.model, direction = "both", 
+                      trace = FALSE)
 ```
 
