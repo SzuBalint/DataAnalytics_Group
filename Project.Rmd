@@ -32,7 +32,7 @@ knitr::opts_chunk$set(
 
 
 
-```{r setup, include=FALSE}
+```{r libraries, include=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(igraph)
@@ -45,6 +45,7 @@ library(mosaic)
 library(ggthemes)
 library(GGally)
 library(skimr)
+library(reticulate)
 
 
 theme_set(theme_minimal())
@@ -66,7 +67,7 @@ theme_update(axis.text.x = element_text(colour= "#001E62",
 
 # Initial data analysis
 
-```{r setup, include=FALSE}
+```{r data, echo=FALSE}
 # Data
 athens_data <- read_csv("data/listings.csv")
 
@@ -353,12 +354,10 @@ athens_map +
 
 # Now that we assume that there is a connection, we calculate the distance for each airbnb
 
-# Calculate distance between coordinates
-distm(c(lon1, lat1), c(lon2, lat2), 
-      fun = distHaversine)
 
 head(athens_data_final)
 
+# Calculate the distance
 athens_data_final<- athens_data_final %>% 
   rowwise() %>% 
   mutate(
@@ -452,15 +451,57 @@ library(stats)
 # To choose a model we will use Akaike's information criterion
 
 # Univariate regression
-model1 <- lm(log(price) ~ accommodates, data=train) 
+
+model1 <- lm(log(price) ~ as.factor(accommodates), data=train) 
+# Are airbnbs that accomodate 8 people necessarily 2 times as expensive? We do not think so, therefore we use factors instead.
+
 summary(model1) 
 summary(model1)$r.squared # R2 same as correlation squared, because of univariate model
-cor(log(train$price), train$accommodates)^2
+# cor(log(train$price), train$accommodates)^2
 
-model1 %>% AIC() # 13680
+model1 %>% AIC() # 13195
 
 
-lm(log(price) ~ accommodates + bedrooms, data=train)
+# Multivariate Regression
 
+# Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
+
+model2 <- lm(log(price) ~ accommodates + bedrooms, data=train)
+
+summary(model2) 
+summary(model2)$r.squared
+
+model2 %>% AIC() # 13479
+
+# Both the r2 and the AIC is smaller with this model, which means that the previous one would be prefered
+
+model2 <- lm(log(price) ~ accommodates + cent_dist, data=train)
+
+summary(model2) 
+summary(model2)$r.squared
+
+model2 %>% AIC() # 12580
+
+# Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
+
+model3 <- lm(log(price) ~ accommodates + cent_dist + room_type, data=train)
+
+summary(model3) 
+summary(model3)$r.squared
+
+model3 %>% AIC() # 11907
+
+# With the room types we could improve our model also.
+
+train %>% 
+  ggplot(aes(x = review_scores_rating, y = price)) +
+  geom_point()
+
+model3 <- lm(log(price) ~ accommodates + cent_dist + room_type + bedrooms + bathrooms + review_scores_rating + host_is_superhost, data=train)
+
+summary(model3) 
+summary(model3)$r.squared
+
+model3 %>% AIC() # 11907
 ```
 
