@@ -233,11 +233,11 @@ athens_data_clean <- athens_data_clean %>%
 ```
 
 
-We now have transformed the data types of the most variables in order to make the data set even cleaner. 
+We now have transformed the data types of the most variables in order to make the data set even cleaner. We have deleted unnecessary values, adjusted wrong variable types and now we will further inspect the quality of our data. 
 
 ### Readjust NA values 
 
-In a next step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
+In a this step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
 
 * If no weekly price -> no discount -> we will insert the daily price multiplied by 7
 * If no monthly price -> no discount -> we will insert the daily price multiplied by 30
@@ -246,33 +246,41 @@ In a next step we will further manipulate the data set. In specific we will corr
 
 ```{r}
 
+# We will replace the NAs in the weekly prices and assume there is no discount if NA
+ athens_data_clean$weekly_price[is.na(athens_data_clean$weekly_price)] <- 
+  athens_data_clean$price *7
 
+
+# We will replace the NAs in the monthly prices and assume there is no discount if NA
+ athens_data_clean$monthly_price[is.na(athens_data_clean$monthly_price)] <- 
+  athens_data_clean$price * 30
+
+
+# We will replace the NAs in the security deposit & cleaning fee and assume 0 if NA
+ athens_data_clean$cleaning_fee[is.na(athens_data_clean$cleaning_fee)] <- 0
+ athens_data_clean$security_deposit[is.na(athens_data_clean$security_deposit)] <- 0
 
 
 ```
 
 
+We now have cleaned the data to a nearly perfect amount. The only thing we haven't yet included are outliers which will be captured in the next paragraph. 
 
-```{r setup, include=FALSE}
-# Remove dollar sign and commas from the data 
+### Readjust outliers
+
+We will screen the most important variable *price*, which we need in our analysis later on, for potential outliers. We will exclude the extreme values, which make no sense economically (way too high prices). Reasons which could explain these extremly high prices are *unwillingness to list at the moment*, *fake listings* or *extremly luxurious apartments*. 
 
 
-
-
-athens_data <- athens_data %>% 
-  mutate(price = as.numeric(str_remove_all(price, "[$ ,]")),
-         weekly_price = as.numeric(str_remove_all(weekly_price, "[$ , ]")),
-         monthly_price = as.numeric(str_remove_all(monthly_price, "[$ ,]")),
-         cleaning_fee = as.numeric(str_remove_all(cleaning_fee, "[$ ,]")))
+```{r}
 
 # Quick plot to see outliers
-athens_data %>% 
+athens_data_clean %>% 
   ggplot(aes(x = price)) +
   geom_histogram() +
   labs(title= "Distribution of prices in our original data")
-# Looks very scewed, probably a log-normal distribution, use log -> normal
 
-athens_data %>% 
+# Looks very scewed, probably a log-normal distribution, use log -> normal
+athens_data_clean %>% 
   ggplot(aes(x = log(price))) +
   geom_histogram()
 
@@ -288,26 +296,29 @@ IQR.outliers <- function(x) {
 }
 
 # Print outliers
-IQR.outliers(athens_data$price)
+IQR.outliers(athens_data_clean$price)
 
-athens_data %>% 
-  filter(!(price %in% IQR.outliers(athens_data$price))) %>% 
+athens_data_clean %>% 
+  filter(!(price %in% IQR.outliers(athens_data_clean$price))) %>% 
   ggplot(aes(x = log(price))) +
   geom_histogram()
 
-# Quick model
-summary(lm(as.numeric(reviews_per_month) ~ as.numeric(review_scores_rating), data = athens_data))
 
-# Create a custom theme for our plots
-theme_set(theme_minimal())
+#Defining our final data set, which has no more outliers
+athens_data_final <- athens_data_clean %>% 
+  filter(!(price %in% IQR.outliers(athens_data_clean$price)))
+
 ```
 
 
+## First analysis of data
+
+As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
 
 
 ```{r}
 # Plot our airbnbs
-qmplot(longitude, latitude, data = athens_data %>% filter(!(price %in% IQR.outliers(athens_data$price))), color = price)
+qmplot(longitude, latitude, data = athens_data_final), color = price)
 
 # City borders coordinates
 athens <- c(c(38.11295, 37.878105), 
