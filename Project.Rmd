@@ -440,11 +440,11 @@ athens_data_final %>%
 athens_data_final %>% 
   filter(host_response_time != "N/A" & !is.na(host_response_time)) %>% 
   group_by(host_response_time) %>% 
-  ggplot(aes(x=host_response_time, y=review_scores_rating)) +
+  ggplot(aes(y=host_response_time, x=review_scores_rating)) +
   geom_boxplot() +
-  ylim(85,100) +
-  xlab("Host response time") +
-  ylab("Review Scores rating") +
+  xlim(85,100) +
+  ylab("Host response time") +
+  xlab("Review Scores rating") +
   labs(title = "Fast response time not valued enough to have impact on rating", subtitle = "The longer the response time the higher the median rating") +
   theme_minimal()
 
