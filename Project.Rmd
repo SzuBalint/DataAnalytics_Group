@@ -316,9 +316,12 @@ athens_data_final <- athens_data_clean %>%
 
 As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
 
+### Analysis on location 
+
+> How important is the location for the price? Are central locations more expensive?
 
 ```{r Syntagma distance}
-# Plot our airbnbs
+# First we start with a simple plot, showing our Airbnbs
 qmplot(longitude, latitude, data = athens_data_final, color = price)
 
 # Syntagma coordinates
@@ -350,11 +353,12 @@ athens_map +
   map_theme +
   labs(title="Airbnbs around the centre seem to be more expensive", 
        subtitle = "Centre - Syntagma Square")
+```
 
+> According to the graph there seems to be a connection between the price and the distance to the center. We will now try to calculate the distance to the center and try to see if the colors of the two graphs fit.  
 
+```{r Syntagma distance}
 # Now that we assume that there is a connection, we calculate the distance for each airbnb
-
-
 head(athens_data_final)
 
 # Calculate the distance
@@ -370,8 +374,14 @@ athens_map +
   geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = cent_dist)) +
   geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), color = 'red', size = 5) +
   theme_minimal() +
-  map_theme
+  map_theme +
+  labs(title = "Locations seem to impact the prices of the airbnbs - same pattern as above" , subtitle = "Distance from center in meters")
+
 ```
+
+> If we compare this graph to the graph above, we can indeed see that the same regions tend to have the same colors. Therefore we conclude that the location will indeed have an impact on the price of the airbnbs and that Airbnbs located in nearer in the center tend to have on average a higher price. 
+
+> Next we are going to explore if based on location there are differences in room types. We expect to have center locations to have on average smaller offerings (e.g. shared rooms)
 
 
 ```{r Room type}
@@ -401,6 +411,94 @@ athens_data_final %>%
   xlab("") +
   guides(fill=guide_legend(title="Room types"))
 ```
+
+> We identified that there is no significance patterns visible. Our hypothesis that more central locations have a higher amount of shared rooms, private rooms than locations further away must therefore be invalid. 
+
+### Analysis of rating
+
+
+```{r}
+#First we want to see how the ratings are distributed in general
+athens_data_final %>% 
+  ggplot(aes(x=review_scores_rating)) +
+  geom_histogram() +
+  # Due to the high skew in distribution, a log y scale makes it easier to read
+  scale_y_log10() +
+  xlab("Review scores rating") +
+  ylab("Quantity") +
+  labs(title = "Most hosts seem to convince the tentants of their apartment", subtitle = "High negative skew in distribution") +
+  theme_minimal()
+```
+
+
+
+```{r}
+# We want to see if the response time has an influence on the general rating of the apartment
+# create a bar chart to see the review scores based on response time
+athens_data_final %>% 
+  filter(host_response_time != "N/A" & !is.na(host_response_time)) %>% 
+  group_by(host_response_time) %>% 
+  ggplot(aes(x=host_response_time, y=review_scores_rating)) +
+  geom_boxplot() +
+  ylim(85,100) +
+  xlab("Host response time") +
+  ylab("Review Scores rating") +
+  labs(title = "Fast response time not valued enough to have impact on rating", subtitle = "The longer the response time the higher the median rating") +
+  theme_minimal()
+
+
+```
+
+
+> We identified that the response time has not a huge impact on the general rating of the Airbnb. We will now try to identify more significant factors. Let's try to test if the price per bed influences the rating. 
+
+```{r}
+# We want to see if the price is a significant factor for the rating
+# In order to reduce the bias in the data we will use the price per bed 
+
+athens_data_final %>% 
+  summarize(
+    price_per_bed = price/beds,
+    review_scores_rating
+  ) %>% ggplot(aes(x=price_per_bed, y=review_scores_rating)) +
+  geom_point() +
+  scale_x_log10() +
+  ylim(60,100) +
+  xlab("Price per bed") +
+  ylab("Review Score Rating") +
+  labs(title = "No correlation between price per bed and review score", 
+       subtitle = "Distribution of review scores and price per bed") +
+  theme_minimal()
+
+
+
+
+```
+
+> Once again we cannot identify a clear trend in the data. They seems to be no correlation between the price per bed and the average rating. We will give the analysis one last try and explore if the rating is influenced by the fact if the host is a superhost (which has many responsibilites compared to a normal host) or not. 
+
+```{r}
+
+# Analysis if superhost status has a positive impact on the rating
+athens_data_final %>% 
+  filter(!is.na(host_is_superhost)) %>% 
+  ggplot(aes(x=host_is_superhost, y=review_scores_rating)) +
+  geom_boxplot() +
+  ylim(60,100) +
+  xlab("Host is superhost?") +
+  ylab("Review Score Rating") +
+  labs(title = "Superhosts seem to make people happier during their stay", 
+       subtitle = "Rating distribution based on Superhost criterion") +
+  theme_minimal()
+
+
+
+```
+
+> Finally we found a relationship. In our eyes this makes completely sense - in order to receive a superhost rating you need to fulfill a lot of requirements (e.g. you are not allowed to cancel as soon as you have accepted hosts & you need to have specific response times etc.). Therefore, the superhost variable includes a lot of positive attributes, which kind of explains that people feel that stays in their apartments worked out particulariy well. Many of them also do this professionally and therefore value reputation a lot. 
+
+> We were quite surprised that neither the price per bed nor the response time of the host (which we have seen as an indicator of the commitment from host side) played a major role in the overall rating. We came up with possible explainations. We think that the price has no impact as people book apartments based on their individual price preferences and then rate the stay according to their experiences. Therefore the price criterion is outweighted by other factors. Regarding the host response time, we concluded that this variable probably doesn't reflect the commitment of the host in an ideal way. There are many more factors, which are not included - therefore the general impact of the response time is too low to see any impact. 
+
 
 
 ## Model
