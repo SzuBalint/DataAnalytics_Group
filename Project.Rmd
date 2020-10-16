@@ -403,3 +403,64 @@ athens_data_final %>%
   guides(fill=guide_legend(title="Room types"))
 ```
 
+
+## Model
+
+We will try to find the best fitting model to predict per night prices
+
+```{r}
+athens_data_final %>% 
+  na.omit() %>% 
+  select_if(is.numeric) %>% 
+  cor() %>% 
+  as.data.frame() %>% 
+  select(price) %>% 
+  add_rownames(var = "variable") %>%
+  arrange(price) %>% 
+  ggplot(aes(x = price, y = reorder(variable, price))) +
+  geom_col() +
+  ylab("") +
+  xlab("Correlation") +
+  labs(title = "Distance from central is the most negative correlation",
+       subtitle = "Correlations with price")
+
+athens_data_final %>% 
+  ggplot(aes(x=cent_dist, y=price)) +
+  geom_point()
+```
+
+Using correlations doesnt seem to work too well, we will need to find another way
+
+### Possible models
+
+```{r}
+# First we will split our data into a training and testing set
+# Set seed so we will get the same results
+set.seed(202119)
+
+size <- floor(0.75 * nrow(athens_data_final))
+train_ind <- sample(seq_len(nrow(athens_data_final)), size = size)
+
+train <- athens_data_final[train_ind, ]
+test <- athens_data_final[-train_ind, ]
+```
+
+OLS
+```{r}
+library(stats)
+
+# To choose a model we will use Akaike's information criterion
+
+# Univariate regression
+model1 <- lm(log(price) ~ accommodates, data=train) 
+summary(model1) 
+summary(model1)$r.squared # R2 same as correlation squared, because of univariate model
+cor(log(train$price), train$accommodates)^2
+
+model1 %>% AIC() # 13680
+
+
+lm(log(price) ~ accommodates + bedrooms, data=train)
+
+```
+
