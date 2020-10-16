@@ -414,8 +414,9 @@ athens_data_final %>%
 
 > We identified that there is no significance patterns visible. Our hypothesis that more central locations have a higher amount of shared rooms, private rooms than locations further away must therefore be invalid. 
 
-### Analysis of rating
 
+
+### Analysis of rating
 
 ```{r}
 #First we want to see how the ratings are distributed in general
@@ -428,6 +429,7 @@ athens_data_final %>%
   ylab("Quantity") +
   labs(title = "Most hosts seem to convince the tentants of their apartment", subtitle = "High negative skew in distribution") +
   theme_minimal()
+  
 ```
 
 
@@ -498,6 +500,59 @@ athens_data_final %>%
 > Finally we found a relationship. In our eyes this makes completely sense - in order to receive a superhost rating you need to fulfill a lot of requirements (e.g. you are not allowed to cancel as soon as you have accepted hosts & you need to have specific response times etc.). Therefore, the superhost variable includes a lot of positive attributes, which kind of explains that people feel that stays in their apartments worked out particulariy well. Many of them also do this professionally and therefore value reputation a lot. 
 
 > We were quite surprised that neither the price per bed nor the response time of the host (which we have seen as an indicator of the commitment from host side) played a major role in the overall rating. We came up with possible explainations. We think that the price has no impact as people book apartments based on their individual price preferences and then rate the stay according to their experiences. Therefore the price criterion is outweighted by other factors. Regarding the host response time, we concluded that this variable probably doesn't reflect the commitment of the host in an ideal way. There are many more factors, which are not included - therefore the general impact of the response time is too low to see any impact. 
+
+### Analysis of room type
+
+We haven't yet analyzed the room type. However, we have the hypothesis that the room type will impact the price which can be achieved with an apartment. 
+
+Is there a difference in price among room types?
+
+```{r}
+# create a plot to show the density and distribution for the price grouped by each room type
+athens_data_final %>% 
+  ggplot(aes(x=price, y=room_type, fill=room_type)) +
+  geom_violin( ) +
+  # make differences more visible in relevant interval
+  xlim(0,250) +
+  # In order to make differences more visible
+  scale_x_log10() +
+  xlab("Price") +
+  ylab("Density") +
+  stat_summary(fun.y=median, geom="point", size=3, color="black") +
+  labs(title = "Private rooms with highest median prices, closely followed by whole apartments",
+       subtitle = "Distribution of price per room type") +
+  theme_minimal() +
+  theme(strip.text.x = element_text(size = 10), legend.position = "none")
+
+```
+
+> First we were quite confused that private rooms are on average more expensive than the apartments. However after having a look of the quanitity of the room types we identified that apartments are way more common than shared rooms. As the overall data quantity is so little compared to apartments, it's likely that outliers adjust the price upwards. It makes sense that shared rooms are really cheap, in the rante between 10 and 30 Euro per night. 
+
+We will now conduct the same analysis but adjust (like above) the price by the amount of persons the apartment can carry. We expect the results to be more equally distributed. 
+
+
+```{r}
+# create a  plot to show the density and distribution for the price per person grouped by each room type
+athens_data_final %>% 
+  ggplot(aes(x=price/accommodates, y=room_type, fill=room_type)) +
+  geom_violin() +
+  # make differences more visible in relevant interval
+  xlim(0,250) +
+  # In order to make differences more visible
+  scale_x_log10() +
+  xlab("Price") +
+  ylab("Density") +
+  stat_summary(fun.y=median, geom="point", size=3, color="black") +
+  labs(title = "Differences in prices per person smaller between apartment types",
+       subtitle = "Distribution of price per person per room type") +
+  theme_minimal() +
+  theme(strip.text.x = element_text(size = 10), legend.position = "none")
+
+
+
+
+```
+> We saw that although the total room price for apartments is higher than the one for shared rooms & hotel rooms in total, the price difference is smaller if you account for the number of accomodates which can be fit in one apartment. Now the median price per person is nearly identical among these 3 categories. Private rooms are still an outlier, but we think it is due to the same reasoning as above. 
 
 
 
