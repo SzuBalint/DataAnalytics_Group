@@ -551,8 +551,6 @@ athens_data_final %>%
 ```
 > We saw that although the total room price for apartments is higher than the one for shared rooms & hotel rooms in total, the price difference is smaller if you account for the number of accomodates which can be fit in one apartment. Now the median price per person is nearly identical among these 3 categories. Private rooms are still an outlier, but we think it is due to the same reasoning as above. 
 
-
-
 ## Model
 
 We will try to find the best fitting model to predict per night prices
