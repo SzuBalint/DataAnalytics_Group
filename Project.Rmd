@@ -833,13 +833,15 @@ server <- function(input,output){
     
     acc_str <- paste0("Accomodates:", input$accom, sep=" ")
     cent_str <- paste0("Distance from centre:", input$cent_dist, sep=" ")
+    bedroom_str <- paste0("Bedrooms:", input$bedrooms, sep=" ")
+    bathrooms_str <- paste0("Bathrooms:", input$bathrooms, sep=" ")
     
     ggplot(data=reac_data, aes(x=price, 
                            y=exp(predict(model6, reac_data, se.fit = TRUE)$fit))) +
       geom_point() +
       geom_abline(intercept = 0, slope = 1) +
       labs(title = "Prediction vs. Actual prices in Athene",
-           subtitle = paste0(acc_str, cent_str, sep=" ")) +
+           subtitle = paste0(acc_str, cent_str, bedroom_str, bathrooms_str, sep=" ")) +
       ylab("Predicted price") +
       xlab("Actual price")
     
