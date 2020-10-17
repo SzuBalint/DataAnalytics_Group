@@ -12,7 +12,7 @@ output:
     code_folding: show
 ---
 
-```{r, setup, echo=FALSE}
+```{r, setup knit, echo=FALSE}
 knitr::opts_chunk$set(
   message = FALSE, 
   warning = FALSE, 
@@ -29,7 +29,7 @@ knitr::opts_chunk$set(
 ```
 
 
-```{r libraries, include=FALSE}
+```{r setup session, include=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(igraph)
@@ -44,12 +44,20 @@ library(GGally)
 library(skimr)
 library(reticulate)
 
+lbs_pink = "#C8102E"
+lbs_blue = "#001E62"
 
 theme_set(theme_minimal())
-theme_update(axis.line = element_line(colour = "#C8102E"))
-theme_update(axis.text.x = element_text(colour= "#001E62",
+# theme_update(axis.line = element_line(colour = "#C8102E"))
+theme_update(axis.text.x = element_text(colour= lbs_blue,
                                  size = 10,
-                                 family = "Arial"))
+                                 family = "Arial"),
+             plot.title = element_text(color = lbs_pink),
+             plot.subtitle = element_text(color = lbs_pink),
+             axis.text = element_text(colour = lbs_blue),
+             axis.title.y = element_text(color = lbs_blue),
+             axis.title.x = element_text(color = lbs_blue),
+             strip.background = element_rect(colour = lbs_pink, fill = "white"))
 ```
 
 # Airbnb Project - Athens
@@ -185,7 +193,7 @@ athens_data_clean <- athens_data_clean %>%
                                             "within an hour", 
                                             "within a few hours",
                                             "within a day",
-                                            "a few days or more",
+                                            "a few days or more"
                                             ))
 ```
 
@@ -346,7 +354,6 @@ athens_map +
   geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = price)) +
   geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), 
              color = 'red', size = 5) +
-  theme_minimal() +
   map_theme +
   labs(title="Airbnbs around the centre seem to be more expensive", 
        subtitle = "Centre - Syntagma Square")
@@ -370,7 +377,6 @@ athens_data_final<- athens_data_final %>%
 athens_map +
   geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = cent_dist)) +
   geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), color = 'red', size = 5) +
-  theme_minimal() +
   map_theme +
   labs(title = "Locations seem to impact the prices of the airbnbs - same pattern as above" , subtitle = "Distance from center in meters")
 
@@ -424,8 +430,7 @@ athens_data_final %>%
   scale_y_log10() +
   xlab("Review scores rating") +
   ylab("Quantity") +
-  labs(title = "Most hosts seem to convince the tentants of their apartment", subtitle = "High negative skew in distribution") +
-  theme_minimal()
+  labs(title = "Most hosts seem to convince the tentants of their apartment", subtitle = "High negative skew in distribution")
   
 ```
 
@@ -442,8 +447,7 @@ athens_data_final %>%
   xlim(85,100) +
   ylab("Host response time") +
   xlab("Review Scores rating") +
-  labs(title = "Fast response time not valued enough to have impact on rating", subtitle = "The longer the response time the higher the median rating") +
-  theme_minimal()
+  labs(title = "Fast response time not valued enough to have impact on rating", subtitle = "The longer the response time the higher the median rating")
 
 
 ```
@@ -466,8 +470,7 @@ athens_data_final %>%
   xlab("Price per bed") +
   ylab("Review Score Rating") +
   labs(title = "No correlation between price per bed and review score", 
-       subtitle = "Distribution of review scores and price per bed") +
-  theme_minimal()
+       subtitle = "Distribution of review scores and price per bed")
 
 
 
@@ -487,8 +490,7 @@ athens_data_final %>%
   xlab("Host is superhost?") +
   ylab("Review Score Rating") +
   labs(title = "Superhosts seem to make people happier during their stay", 
-       subtitle = "Rating distribution based on Superhost criterion") +
-  theme_minimal()
+       subtitle = "Rating distribution based on Superhost criterion") 
 
 
 
@@ -518,7 +520,6 @@ athens_data_final %>%
   stat_summary(fun.y=median, geom="point", size=3, color="black") +
   labs(title = "Private rooms with highest median prices, closely followed by whole apartments",
        subtitle = "Distribution of price per room type") +
-  theme_minimal() +
   theme(strip.text.x = element_text(size = 10), legend.position = "none")
 
 ```
@@ -542,7 +543,6 @@ athens_data_final %>%
   stat_summary(fun.y=median, geom="point", size=3, color="black") +
   labs(title = "Differences in prices per person smaller between apartment types",
        subtitle = "Distribution of price per person per room type") +
-  theme_minimal() +
   theme(strip.text.x = element_text(size = 10), legend.position = "none")
 
 
@@ -678,7 +678,7 @@ model5 %>% AIC() # 5575
 
 # Model 6
 
-# In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for its demand.
+# In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for the demand of that airbnb.
 
 model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
              data=na.omit(train))
@@ -733,3 +733,109 @@ We used stepwise method to look for the lowest possible AIC model, but it contai
   *arrange(Estimate)*
 
 # Final predictions
+
+First let's visualize is our errors could be explained by their location
+
+```{r}
+pred_price <- exp(predict(model6, test, se.fit = TRUE)$fit)
+
+pred_test <- test %>% 
+  cbind(pred_price) %>% 
+  mutate(
+    pred_error = (test$price - pred_price) / pred_price
+  )  
+  
+athens_map +
+  geom_point(data=pred_test, aes(x = longitude, y = latitude, color = pred_error*100)) +
+  geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), color = 'red', size = 5) +
+  map_theme +
+  labs(title = "Our residuals do not correlate with distance" , subtitle = "Colors represent error level") +
+  scale_color_continuous(name="Error level (%)")
+```
+
+
+Finally let's see how much would be a night if me and my fried would like to visit Athene and would like to leave in 1.5km radius of the centre.
+
+```{r}
+pred_friend <- test %>% 
+  filter(
+    cent_dist <= 1500,
+    accommodates == 2
+  )
+
+ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6, pred_friend, se.fit = TRUE)$fit))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1) +
+  labs(title = "Our model predicts well most of the prices, except some extreme prices",
+       subtitle = "Predicted vs actual prices (1.5km from centre, 2 accomodation)") +
+  ylab("Predicted price") +
+  xlab("Actual price")
+```
+
+## Create your own predictions
+
+Would you like to travel with more friends? Or would you like to move further our?
+
+Use this tool to find out more about our predictions and actuals
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  titlePanel(title=h4("Predicted Athene airbnb prices", align="center")),
+  sidebarPanel( 
+    numericInput("cent_dist", label="How far from the centre (max value)?", value=1500),
+    numericInput("accom", label="How many people?", value=2)),
+  mainPanel(plotOutput("plot2"),
+            tableOutput("table")))
+
+server <- function(input,output){
+  
+  dat <- reactive({
+    
+    data <- pred_friend <- test %>% 
+      filter(
+        cent_dist <= input$cent_dist,
+        accommodates == input$accom
+        )
+    
+    return(data)
+  })
+  
+  output$table <- renderTable({
+    
+    table <- predict(model6, newdata = dat(), 
+                                        interval = "confidence") %>% 
+      exp() %>% 
+      data.frame() %>%
+      summarize(lower_bound = mean(lwr),
+                predicted_price = mean(fit),
+                upper_bound = mean(upr))
+    
+    names(table) <- c("Lower CI Prediction", "Mean Prediction", "Upper CI Prediction")
+    
+    return(table)
+  })
+  
+  output$plot2<-renderPlot({
+    
+    reac_data <- dat()
+    
+    acc_str <- paste0("Accomodates:", input$accom, sep=" ")
+    cent_str <- paste0("Distance from centre:", input$cent_dist, sep=" ")
+    
+    ggplot(data=reac_data, aes(x=price, 
+                           y=exp(predict(model6, reac_data, se.fit = TRUE)$fit))) +
+      geom_point() +
+      geom_abline(intercept = 0, slope = 1) +
+      labs(title = "Prediction vs. Actual prices in Athene",
+           subtitle = paste0(acc_str, cent_str, sep=" ")) +
+      ylab("Predicted price") +
+      xlab("Actual price")
+    
+    })
+  }
+  
+shinyApp(ui, server)
+```
+
