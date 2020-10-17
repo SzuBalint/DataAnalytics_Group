@@ -29,9 +29,6 @@ knitr::opts_chunk$set(
 ```
 
 
-
-
-
 ```{r libraries, include=FALSE}
 library(tidyverse)
 library(ggplot2)
@@ -357,7 +354,7 @@ athens_map +
 
 > According to the graph there seems to be a connection between the price and the distance to the center. We will now try to calculate the distance to the center and try to see if the colors of the two graphs fit.  
 
-```{r Syntagma distance}
+```{r Distance plot}
 # Now that we assume that there is a connection, we calculate the distance for each airbnb
 head(athens_data_final)
 
@@ -588,13 +585,13 @@ Using correlations doesnt seem to work too well, we will need to find another wa
 ```{r}
 # First we will split our data into a training and testing set
 # Set seed so we will get the same results
-set.seed(202119)
+set.seed(202019)
 
 size <- floor(0.75 * nrow(athens_data_final))
 train_ind <- sample(seq_len(nrow(athens_data_final)), size = size)
 
-train <- athens_data_final[train_ind, ]
-test <- athens_data_final[-train_ind, ]
+train <- athens_data_final[train_ind, ] %>% na.omit()
+test <- athens_data_final[-train_ind, ] %>%  na.omit()
 ```
 
 OLS
@@ -605,57 +602,93 @@ library(stats)
 
 # Univariate regression
 
-model1 <- lm(log(price) ~ as.factor(accommodates), data=train) 
+# Model 1
+
+model1 <- lm(log(price) ~ as.factor(accommodates), 
+             data=na.omit(train)) 
 # Are airbnbs that accomodate 8 people necessarily 2 times as expensive? We do not think so, therefore we use factors instead.
 
 summary(model1) 
-summary(model1)$r.squared # R2 same as correlation squared, because of univariate model
-# cor(log(train$price), train$accommodates)^2
+summary(model1)$r.squared # R2 0.247
 
-model1 %>% AIC() # 13195
+model1 %>% AIC() # 13241
 
 
 # Multivariate Regression
 
 # Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
 
-model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, data=train)
+# Model 2
+
+model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
+             data=na.omit(train))
 
 summary(model2) 
-summary(model2)$r.squared
+summary(model2)$r.squared # R2 0.254
 
-model2 %>% AIC() # 13071
+model2 %>% AIC() # 13151
 
 # Both the r2 and the AIC is smaller with this model, which means that the previous one would be prefered
 
-model2 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=train)
+model2 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
 
 summary(model2) 
-summary(model2)$r.squared
+summary(model2)$r.squared # R2 0.331
 
-model2 %>% AIC() # 12218
+model2 %>% AIC() # 12240
 
 # Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
 
-model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type, data=train)
+# Model 3
+
+model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type,
+             data=na.omit(train))
 
 summary(model3) 
-summary(model3)$r.squared
+summary(model3)$r.squared #R2 0.362
 
-model3 %>% AIC() # 11907
+model3 %>% AIC() # 11846
 
-# With the room types we could improve our model also.
+# Room types will impact prices, as people would pay a premium for better acommendation, threfore with the room types we could improve our model also.
 
-train %>% 
-  ggplot(aes(x = review_scores_rating, y = price)) +
-  geom_point()
 
-model4 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type + bedrooms + bathrooms + review_scores_rating, data=train)
+# Model 4
+
+model4 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist, 
+             data=na.omit(train))
 
 summary(model4) 
-summary(model4)$r.squared
+summary(model4)$r.squared # R2 0.379
 
-model4 %>% AIC() # 7056
+model4 %>% AIC() # 11616
+
+# In this model we try to implement our distance variable, and more information about the flats. Although our model has higher R2 and AIC, it did not have a big effect
+
+# Model 5
+
+model5 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist + as.factor(neighbourhood) * cent_dist, 
+             data=na.omit(train))
+
+summary(model5) 
+summary(model5)$r.squared # R2 0.507
+
+model5 %>% AIC() # 5575
+
+# With the interaction between the distance and neigbourhood we achived our biggest improvement yet. Distance is important during flat hunting, but the neighbourhood also plays a huge role.
+
+# Model 6
+
+# In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for its demand.
+
+model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
+             data=na.omit(train))
+
+summary(model6) 
+summary(model6)$r.squared #R2 0.547
+
+model6 %>% AIC() # 5092
+
+# With these adjustments our model our model outperforms any other model we tried, and is still fairly understandable. Our R2 is around 55%, and our Akaike infromation criterion is  5092, which is much lower than our first tries which were around 12000. 
 
 ggplot(model4, aes(x = .fitted, y = .resid)) + 
   geom_point() +
@@ -677,12 +710,26 @@ mean((log(test$price) - predict.lm(model2, test)) ^ 2, na.rm=T)
 mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
 # Model 4
 mean((log(test$price) - predict.lm(model4, test)) ^ 2, na.rm=T)
+# Model 5
+mean((log(test$price) - predict.lm(model5, test)) ^ 2, na.rm=T)
+# Model 6
+mean((log(test$price) - predict.lm(model6, test)) ^ 2, na.rm=T)
+
+# Our final model beats any other model on our test data also
 ```
 
-```{r}
-full.model <- lm(log(price) ~., data = train)
 
-step.model <- stepAIC(full.model, direction = "both", 
-                      trace = FALSE)
-```
+We used stepwise method to look for the lowest possible AIC model, but it contained variables which would be hard to defend logically
 
+*full.model <- lm(log(price) ~., data = na.omit(train))*
+
+*step.model <- stepAIC(full.model, direction = "both",*
+                      *trace = FALSE)*
+
+*step.model %>% summary() %>%*
+  *select(coefficients)*
+
+*as.data.frame(summary(step.model)$coefficients) %>%*
+  *arrange(Estimate)*
+
+# Final predictions
