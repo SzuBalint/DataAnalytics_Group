@@ -574,8 +574,42 @@ athens_data_final %>%
        subtitle = "Correlations with price")
 
 athens_data_final %>% 
-  ggplot(aes(x=cent_dist, y=price)) +
-  geom_point()
+  select(cent_dist, price, accommodates, bedrooms, bathrooms, host_is_superhost, beds, cleaning_fee) %>% 
+  na.omit() %>% 
+  cor() %>% 
+  round(2) %>% 
+  melt() %>% 
+  mutate(
+    Var1 = case_when(
+      Var1 == "cent_dist" ~ "Distance from centre",
+      Var1 == "price" ~ "Price",
+      Var1 == "accommodates" ~ "Accommodation",
+      Var1 == "bedrooms" ~ "Number of bedrooms",
+      Var1 == "bathrooms" ~ "Number of bathrooms",
+      Var1 == "host_is_superhost" ~ "Superhost",
+      Var1 == "beds" ~ "Number of beds",
+      Var1 == "cleaning_fee" ~ "Cleaning fee"),
+    Var2 = case_when(
+      Var2 == "cent_dist" ~ "Distance from centre",
+      Var2 == "price" ~ "Price",
+      Var2 == "accommodates" ~ "Accommodation",
+      Var2 == "bedrooms" ~ "Number of bedrooms",
+      Var2 == "bathrooms" ~ "Number of bathrooms",
+      Var2 == "host_is_superhost" ~ "Superhost",
+      Var2 == "beds" ~ "Number of beds",
+      Var2 == "cleaning_fee" ~ "Cleaning fee")
+    )%>% 
+  ggplot(aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = lbs_blue, high = lbs_pink, mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  coord_fixed() +
+  labs(title="Bathrooms, bedrooms, accomedation \nand price all positive correlation",
+       subtitle="Correlation accross variables") +
+  xlab("") +
+  ylab("")
 ```
 
 Using correlations doesnt seem to work too well, we will need to find another way
@@ -786,8 +820,6 @@ ui <- fluidPage(
   sidebarPanel( 
     numericInput("cent_dist", label="How far from the centre (max value)?", value=1500),
     numericInput("accom", label="How many people?", value=2),
-    selectInput("bedrooms", label="How many bedrooms?", 
-                choices = c("Any", unique(test$bedrooms))),
     selectInput("bathrooms", label="How many bathrooms?", 
                 choices = c("Any", unique(test$bathrooms)))),
   mainPanel(plotOutput("plot2")),
@@ -803,9 +835,6 @@ server <- function(input,output){
         ifelse(input$bathrooms != "Any", 
                bathrooms == input$bathrooms, 
                bathrooms == bathrooms),
-        ifelse(input$bedrooms != "Any", 
-               bedrooms == input$bedrooms, 
-               bedrooms == bedrooms),
         accommodates == input$accom
         )
     
@@ -833,7 +862,6 @@ server <- function(input,output){
     
     acc_str <- paste0("Accomodates:", input$accom, sep=" ")
     cent_str <- paste0("Distance from centre:", input$cent_dist, sep=" ")
-    bedroom_str <- paste0("Bedrooms:", input$bedrooms, sep=" ")
     bathrooms_str <- paste0("Bathrooms:", input$bathrooms, sep=" ")
     
     ggplot(data=reac_data, aes(x=price, 
@@ -841,7 +869,7 @@ server <- function(input,output){
       geom_point() +
       geom_abline(intercept = 0, slope = 1) +
       labs(title = "Prediction vs. Actual prices in Athene",
-           subtitle = paste0(acc_str, cent_str, bedroom_str, bathrooms_str, sep=" ")) +
+           subtitle = paste0(acc_str, cent_str, bathrooms_str, sep=" ")) +
       ylab("Predicted price") +
       xlab("Actual price")
     
