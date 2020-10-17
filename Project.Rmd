@@ -42,6 +42,7 @@ library(mosaic)
 library(ggthemes)
 library(GGally)
 library(skimr)
+library(reshape2)
 library(reticulate)
 
 lbs_pink = "#C8102E"
