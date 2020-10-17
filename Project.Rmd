@@ -42,6 +42,7 @@ library(mosaic)
 library(ggthemes)
 library(GGally)
 library(skimr)
+library(reshape2)
 library(reticulate)
 
 lbs_pink = "#C8102E"
@@ -65,6 +66,8 @@ theme_update(axis.text.x = element_text(colour= lbs_blue,
 ## Introduction
 
 
+
+
 ## Summary of key findings
 
 
@@ -72,7 +75,7 @@ theme_update(axis.text.x = element_text(colour= lbs_blue,
 
 # Initial data analysis
 
-```{r data, echo=FALSE}
+```{r data, include=FALSE}
 # Data
 athens_data <- read_csv("data/listings.csv")
 
@@ -81,26 +84,23 @@ glimpse(athens_data)
 
 ## Cleaning the data 
 
-
-```{r}
+```{r include=FALSE}
 skim(athens_data)
 ```
 
-Based on our initial data analysis we identified 4 major types of variables in the underlying data set: 
-
+> Based on our initial data analysis we identified 4 major types of variables in the underlying data set: 
 1) Character values: 47
 2) Date values: 5
 3) Logical values: 15
 4) Numeric values: 39
 
-We also have seen that we have 11,314 observations (apartments) & a total of 106 data points per apartment. 
+> We also have seen that we have 11,314 observations (apartments) & a total of 106 data points per apartment. 
 
 
 ### Reducing the dataset 
 
-We identified many variables that have a characteristic which make it either not interesting to analyze (only one/ very few distinct values, text strings) or that we think we will not use in the analysis later on. 
-
-So we excluded these columns/ data points in order to make the data easier & faster to handle.
+> We identified many variables that have a characteristic which make them either not interesting to analyze (e.g. only one/ very few distinct values or text strings) or that we think we will not use in the analysis later on. 
+--> So we excluded these columns/ data points in order to make the data easier & faster to handle.
 
 
 ```{r}
@@ -152,15 +152,17 @@ athens_data_red <- athens_data %>%
 ```
 
 
-We now only have 41 columns left, which make the data set easier to handle. 
+> We now only have 41 columns left, which make the data set easier to handle. 
+
+
 
 ### Adjust data values
 
-In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
-
+> In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
 * We transform the price, weekly price, monthly price, security deposit, cleaning fee, extra people, host response rate and host acceptance rate from character variables to numeric ones
 * We create factor variables for Property type, room types, cancellation policy and host response time 
 
+> Transforming character values to numeric values
 
 ```{r}
 # Transform character values to numeric values
@@ -177,6 +179,9 @@ athens_data_clean <- athens_data_red %>%
      )
 ```
 
+
+
+> Transforming character values to factor values  
 
 ```{r}
 # Create factor variables for room types 
@@ -197,9 +202,7 @@ athens_data_clean <- athens_data_clean %>%
                                             ))
 ```
 
-
-The issue with the property types is that there are to much in order to generate reasonable factors. We need to analyze how much the share of each category. Best case would be that the majority of the property type share is done with a small number. If that is the case we can just summarize the rest in a new category calles "other".
-
+> We identfied that there exists an issue with the creation of a factor variable for property types. There are too much categories in order to generate reasonable factors. So, we will analyze how much the share each category has. Best case would be that the majority of the property type share is done with a small number (20% of factors account 80% of the total share). If that is the case we can just summarize the rest in a new category calles "other".
 
 ```{r}
 # Identify the amount of each property type
@@ -211,8 +214,7 @@ most_com_properties <- athens_data_clean %>%
 most_com_properties
 ```
 
-As the 5 most common property types account for ~95% of the total share we can just focus on them and summarize the rest in "Others"
-
+> As the 5 most common property types account for ~95% of the total share we can just focus on them and summarize the rest in "Others"
 
 ```{r}
 
@@ -239,15 +241,15 @@ athens_data_clean <- athens_data_clean %>%
 ```
 
 
-We now have transformed the data types of the most variables in order to make the data set even cleaner. We have deleted unnecessary values, adjusted wrong variable types and now we will further inspect the quality of our data. 
+> We now have transformed the data types of most variables in order to make the data set easier to work with in the analysis part below. We have deleted unnecessary values, adjusted wrong variable types and now we will further inspect the quality of our data. 
+
 
 ### Readjust NA values 
 
-In a this step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
-
-* If no weekly price -> no discount -> we will insert the daily price multiplied by 7
-* If no monthly price -> no discount -> we will insert the daily price multiplied by 30
-* If no security deposit/ cleaning fee -> no fee -> we will insert 0
+> In a this step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
+* If no *weekly price* -> no discount -> we will insert the daily price multiplied by 7
+* If no *monthly price* -> no discount -> we will insert the daily price multiplied by 30
+* If no *security deposit/ cleaning fee* -> no fee -> we will insert 0
 
 
 ```{r}
@@ -269,28 +271,38 @@ In a this step we will further manipulate the data set. In specific we will corr
 
 ```
 
+> We now also eliminated unnecessary NA values. The only thing we haven't yet adjusted are potential outliers which will be captured in the next section.
 
-We now have cleaned the data to a nearly perfect amount. The only thing we haven't yet included are outliers which will be captured in the next paragraph. 
 
 ### Readjust outliers
 
-We will screen the most important variable *price*, which we need in our analysis later on, for potential outliers. We will exclude the extreme values, which make no sense economically (way too high prices). Reasons which could explain these extremly high prices are *unwillingness to list at the moment*, *fake listings* or *extremly luxurious apartments*. 
+> We will screen the most important variable *price*, which we need in our analysis later on, for potential outliers. We will exclude the extreme values, which make no sense economically (way too high prices). Reasons which could explain these extremly high prices are *unwillingness to list at the moment*, *fake listings* or *extremly luxurious apartments*. 
 
+> We will start with a quick plot to see if we have outliers in the price data
 
 ```{r}
-
 # Quick plot to see outliers
 athens_data_clean %>% 
   ggplot(aes(x = price)) +
   geom_histogram() +
   labs(title= "Distribution of prices in our original data")
+```
 
+
+> The distribution looks very scewed, we cannot identifiy anything. Probably a log-normal distribution is better suited -> We use log -> normal
+
+```{r}
 # Looks very scewed, probably a log-normal distribution, use log -> normal
 athens_data_clean %>% 
   ggplot(aes(x = log(price))) +
   geom_histogram()
+```
 
-# There seem to be a few outliers. We will remove them using the IQR method, becauses we belive that keeping those values would skew our analysis
+
+> Here seem to be a few outliers. We will remove them using the IQR method, becauses we belive that keeping those values would skew our analysis
+
+```{r}
+# Removing outliers with IQR method
 IQR.outliers <- function(x) {
   Q3 <- quantile(x,0.95)
   Q1 <- quantile(x,0.05)
@@ -303,23 +315,37 @@ IQR.outliers <- function(x) {
 
 # Print outliers
 IQR.outliers(athens_data_clean$price)
+```
 
+> We see that we will not exclude any of the low prices, but every price which is above 352
+
+```{r}
 athens_data_clean %>% 
   filter(!(price %in% IQR.outliers(athens_data_clean$price))) %>% 
   ggplot(aes(x = log(price))) +
   geom_histogram()
+```
 
+> We can see that the graph now looks way more normally distributed than before. We believe that the dataset is now more representative. 
 
+```{r}
 #Defining our final data set, which has no more outliers
 athens_data_final <- athens_data_clean %>% 
   filter(!(price %in% IQR.outliers(athens_data_clean$price)))
 
 ```
 
+> We finally derived our final data set with which we can start with the analysis part of the project. 
+* We reduced the relevant columns to 41
+* We reduced the relevant data points (without outliers) to 11,227
+* We readjusted many data types
+* We removed unnecessary NAs and increased the quality of the dataset
+* We analyzed outliers and removed them
+
 
 ## First analysis of data
 
-As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
+> As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
 
 ### Analysis on location 
 
@@ -361,10 +387,8 @@ athens_map +
 
 > According to the graph there seems to be a connection between the price and the distance to the center. We will now try to calculate the distance to the center and try to see if the colors of the two graphs fit.  
 
-```{r Distance plot}
-# Now that we assume that there is a connection, we calculate the distance for each airbnb
-head(athens_data_final)
 
+```{r Distance plot}
 # Calculate the distance
 athens_data_final<- athens_data_final %>% 
   rowwise() %>% 
@@ -384,13 +408,11 @@ athens_map +
 
 > If we compare this graph to the graph above, we can indeed see that the same regions tend to have the same colors. Therefore we conclude that the location will indeed have an impact on the price of the airbnbs and that Airbnbs located in nearer in the center tend to have on average a higher price. 
 
+
 > Next we are going to explore if based on location there are differences in room types. We expect to have center locations to have on average smaller offerings (e.g. shared rooms)
 
-
 ```{r Room type}
-# How many room types are there?
-length(unique(athens_data_final$room_type))
-
+# First we calculate the average distance 
 avg_dist <- athens_data_final %>% 
   group_by(neighbourhood) %>% 
   summarise(
@@ -398,6 +420,7 @@ avg_dist <- athens_data_final %>%
   ) %>% 
   arrange(-avg_dist)
 
+# Now we create a graph showing how average distance impacts room type
 athens_data_final %>% 
   filter(!is.na(neighbourhood)) %>% 
   select(neighbourhood,
@@ -408,18 +431,21 @@ athens_data_final %>%
   mutate(perc = n/sum(n)) %>% 
   ggplot(aes(fill=room_type, x=perc, y=factor(neighbourhood,levels = avg_dist$neighbourhood))) + 
     geom_bar(position="fill", stat="identity") +
-  labs(title="Average distance from the centre does not seem to impact room types",
+  labs(title="Distance from the centre does not impact room type",
        subtitle = "Average distance in decreasing order") +
   ylab("") +
   xlab("") +
   guides(fill=guide_legend(title="Room types"))
 ```
 
+
 > We identified that there is no significance patterns visible. Our hypothesis that more central locations have a higher amount of shared rooms, private rooms than locations further away must therefore be invalid. 
 
 
 
 ### Analysis of rating
+
+> How are ratings general distributed. Is there a skew in the data, or are they nearly normal?
 
 ```{r}
 #First we want to see how the ratings are distributed in general
@@ -434,7 +460,9 @@ athens_data_final %>%
   
 ```
 
+> We identified that the rating has a strong negative skew in the distribution. We therefore imply that most tenants have a overall positive experience of their stay and are more likely to give feedback if they have made positive experiences than negative ones. 
 
+> Next we want to see the influence of the response time on the overall rating. We think that the response rate is a proxy for the general commitment of the host, which is quite important in our opinion. 
 
 ```{r}
 # We want to see if the response time has an influence on the general rating of the apartment
@@ -451,7 +479,6 @@ athens_data_final %>%
 
 
 ```
-
 
 > We identified that the response time has not a huge impact on the general rating of the Airbnb. We will now try to identify more significant factors. Let's try to test if the price per bed influences the rating. 
 
@@ -500,11 +527,13 @@ athens_data_final %>%
 
 > We were quite surprised that neither the price per bed nor the response time of the host (which we have seen as an indicator of the commitment from host side) played a major role in the overall rating. We came up with possible explainations. We think that the price has no impact as people book apartments based on their individual price preferences and then rate the stay according to their experiences. Therefore the price criterion is outweighted by other factors. Regarding the host response time, we concluded that this variable probably doesn't reflect the commitment of the host in an ideal way. There are many more factors, which are not included - therefore the general impact of the response time is too low to see any impact. 
 
+
+
 ### Analysis of room type
 
-We haven't yet analyzed the room type. However, we have the hypothesis that the room type will impact the price which can be achieved with an apartment. 
+> We haven't yet analyzed the room type. However, we have the hypothesis that the room type will impact the price which can be achieved with an apartment. 
 
-Is there a difference in price among room types?
+> Is there a difference in price among room types?
 
 ```{r}
 # create a plot to show the density and distribution for the price grouped by each room type
@@ -572,8 +601,42 @@ athens_data_final %>%
        subtitle = "Correlations with price")
 
 athens_data_final %>% 
-  ggplot(aes(x=cent_dist, y=price)) +
-  geom_point()
+  select(cent_dist, price, accommodates, bedrooms, bathrooms, host_is_superhost, beds, cleaning_fee) %>% 
+  na.omit() %>% 
+  cor() %>% 
+  round(2) %>% 
+  melt() %>% 
+  mutate(
+    Var1 = case_when(
+      Var1 == "cent_dist" ~ "Distance from centre",
+      Var1 == "price" ~ "Price",
+      Var1 == "accommodates" ~ "Accommodation",
+      Var1 == "bedrooms" ~ "Number of bedrooms",
+      Var1 == "bathrooms" ~ "Number of bathrooms",
+      Var1 == "host_is_superhost" ~ "Superhost",
+      Var1 == "beds" ~ "Number of beds",
+      Var1 == "cleaning_fee" ~ "Cleaning fee"),
+    Var2 = case_when(
+      Var2 == "cent_dist" ~ "Distance from centre",
+      Var2 == "price" ~ "Price",
+      Var2 == "accommodates" ~ "Accommodation",
+      Var2 == "bedrooms" ~ "Number of bedrooms",
+      Var2 == "bathrooms" ~ "Number of bathrooms",
+      Var2 == "host_is_superhost" ~ "Superhost",
+      Var2 == "beds" ~ "Number of beds",
+      Var2 == "cleaning_fee" ~ "Cleaning fee")
+    )%>% 
+  ggplot(aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = lbs_blue, high = lbs_pink, mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  coord_fixed() +
+  labs(title="Bathrooms, bedrooms, accomedation \nand price all positive correlation",
+       subtitle="Correlation accross variables") +
+  xlab("") +
+  ylab("")
 ```
 
 Using correlations doesnt seem to work too well, we will need to find another way
@@ -784,8 +847,6 @@ ui <- fluidPage(
   sidebarPanel( 
     numericInput("cent_dist", label="How far from the centre (max value)?", value=1500),
     numericInput("accom", label="How many people?", value=2),
-    selectInput("bedrooms", label="How many bedrooms?", 
-                choices = c("Any", unique(test$bedrooms))),
     selectInput("bathrooms", label="How many bathrooms?", 
                 choices = c("Any", unique(test$bathrooms)))),
   mainPanel(plotOutput("plot2")),
@@ -801,9 +862,6 @@ server <- function(input,output){
         ifelse(input$bathrooms != "Any", 
                bathrooms == input$bathrooms, 
                bathrooms == bathrooms),
-        ifelse(input$bedrooms != "Any", 
-               bedrooms == input$bedrooms, 
-               bedrooms == bedrooms),
         accommodates == input$accom
         )
     
@@ -831,13 +889,14 @@ server <- function(input,output){
     
     acc_str <- paste0("Accomodates:", input$accom, sep=" ")
     cent_str <- paste0("Distance from centre:", input$cent_dist, sep=" ")
+    bathrooms_str <- paste0("Bathrooms:", input$bathrooms, sep=" ")
     
     ggplot(data=reac_data, aes(x=price, 
                            y=exp(predict(model6, reac_data, se.fit = TRUE)$fit))) +
       geom_point() +
       geom_abline(intercept = 0, slope = 1) +
       labs(title = "Prediction vs. Actual prices in Athene",
-           subtitle = paste0(acc_str, cent_str, sep=" ")) +
+           subtitle = paste0(acc_str, cent_str, bathrooms_str, sep=" ")) +
       ylab("Predicted price") +
       xlab("Actual price")
     
