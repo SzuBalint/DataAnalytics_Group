@@ -785,9 +785,13 @@ ui <- fluidPage(
   titlePanel(title=h4("Predicted Athene airbnb prices", align="center")),
   sidebarPanel( 
     numericInput("cent_dist", label="How far from the centre (max value)?", value=1500),
-    numericInput("accom", label="How many people?", value=2)),
-  mainPanel(plotOutput("plot2"),
-            tableOutput("table")))
+    numericInput("accom", label="How many people?", value=2),
+    selectInput("bedrooms", label="How many bedrooms?", 
+                choices = c("Any", unique(test$bedrooms))),
+    selectInput("bathrooms", label="How many bathrooms?", 
+                choices = c("Any", unique(test$bathrooms)))),
+  mainPanel(plotOutput("plot2")),
+            tableOutput("table"))
 
 server <- function(input,output){
   
@@ -796,6 +800,12 @@ server <- function(input,output){
     data <- pred_friend <- test %>% 
       filter(
         cent_dist <= input$cent_dist,
+        ifelse(input$bathrooms != "Any", 
+               bathrooms == input$bathrooms, 
+               bathrooms == bathrooms),
+        ifelse(input$bedrooms != "Any", 
+               bedrooms == input$bedrooms, 
+               bedrooms == bedrooms),
         accommodates == input$accom
         )
     
