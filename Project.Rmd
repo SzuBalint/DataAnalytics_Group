@@ -584,7 +584,7 @@ athens_data_final %>%
 
 > We will try to find the best fitting model to predict per night prices. Therefore the first step is to analyze potential regressions with the price to deduct the key drivers of this variable. We will start with a simple line chart showing the absolute correlation with the price variable. 
 
-```{r}
+```{r CorrelationBarchart}
 athens_data_final %>% 
   na.omit() %>% 
   select_if(is.numeric) %>% 
@@ -603,7 +603,7 @@ athens_data_final %>%
 
 > Next we also want to explore potential intercorrelations for the most promising variables. We therefore will cut the datapoints with a low/ no correlation and create a correlation heatmap for the other ones. 
 
-```{r}
+```{r CorrelationMatrix}
 athens_data_final %>% 
   # reducing the dataset in order to make it more readable
   select(cent_dist, price, accommodates, bedrooms, bathrooms, host_is_superhost, beds, cleaning_fee) %>% 
@@ -653,7 +653,7 @@ athens_data_final %>%
 
 > First we will split our data into a training and testing set
 
-```{r}
+```{r Sampling}
 # Set seed so we will get the same results
 set.seed(202019)
 
@@ -667,7 +667,7 @@ test <- athens_data_final[-train_ind, ]
 
 > Then we run our first regression. To choose a model we will use Akaike's information criterion, which tells us about the significance of our finding and lets us choose among different number of variables. 
 
-```{r}
+```{r Model1}
 library(stats)
 
 # Univariate regression
@@ -686,7 +686,7 @@ model1 %>% AIC() # 13241
 
 > Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
 
-```{r}
+```{r Model2}
 # Multivariate Regression
 # Model 2
 
@@ -701,7 +701,7 @@ model2 %>% AIC() # 13151
 
 > Both the r2 and the AIC is smaller with this model, which means that the this one would be preferred
 
-```{r}
+```{r Model3}
 model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
 
 summary(model3) 
@@ -712,7 +712,7 @@ model3 %>% AIC() # 12240
 
 > Our R2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
 
-```{r}
+```{r Model4}
 # Model 4
 model4 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type,
              data=na.omit(train))
@@ -726,7 +726,7 @@ model4 %>% AIC() # 11846
 
 > Room types will impact prices, as people would pay a premium for better acommendation, threfore with the room types we could improve our model also.
 
-```{r}
+```{r Model5}
 # Model 5
 model5 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist, 
              data=na.omit(train))
@@ -739,7 +739,7 @@ model5 %>% AIC() # 11616
 
 > In the next model we try to implement our distance variable, and more information about the flats. Although our model has higher R2 and AIC, it did not have a big effect. 
 
-```{r}
+```{rModel6}
 # Model 6
 model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist + as.factor(neighbourhood) * cent_dist, 
              data=na.omit(train))
@@ -752,7 +752,7 @@ model6 %>% AIC() # 5575
 
 > With the interaction between the distance and neigbourhood we achived our biggest improvement yet. Distance is important during flat hunting, but the neighbourhood also plays a huge role.
 
-```{r}
+```{r Model7}
 # Model 7
 model7 <- lm(log(price) ~ as.factor(accommodates) + room_type + bathrooms  +
                as.factor(neighbourhood) * cent_dist + 
@@ -771,7 +771,7 @@ model7 %>% AIC() # 5184
 
 > We now plot a graph showing the distribution of the residuals
 
-```{r}
+```{r ResidualPlot}
 ggplot(model5, aes(x = .fitted, y = .resid)) + 
   geom_point() +
   labs(title = "Residuals vary around zero") +
@@ -783,7 +783,7 @@ ggplot(model5, aes(x = .fitted, y = .resid)) +
 
 > Because of our data is dependent on human actions, we are going to test if the variance is constant in our model. If not, then we will correct for this using robust standard errors.
 
-```{r}
+```{r Heteroscedasticity}
 # Heteroscedasticity
 
 ols_test_breusch_pagan(model7)
@@ -810,7 +810,7 @@ summary(model7_rob)$r.squared #R2 0.589
 
 > Test our models with MSPE (mean squared prediction error)
 
-```{r}
+```{r MSPE message=FALSE}
 
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
@@ -851,7 +851,7 @@ We used stepwise method to look for the lowest possible AIC model, but it contai
 
 First let's visualize is our errors could be explained by their location
 
-```{r}
+```{r Dashboard message=FALSE}
 pred_price <- exp(predict(model7_rob, test, se.fit = TRUE)$fit)
 
 pred_test <- test %>% 
