@@ -44,6 +44,7 @@ library(ggthemes)
 library(GGally)
 library(skimr)
 library(reshape2)
+library(olsrr)
 library(reticulate)
 
 lbs_pink = "#C8102E"
@@ -668,14 +669,15 @@ athens_data_final %>%
 # Set seed so we will get the same results
 set.seed(202019)
 
+# Split our data 25% - 75% to train and test
 size <- floor(0.75 * nrow(athens_data_final))
 train_ind <- sample(seq_len(nrow(athens_data_final)), size = size)
 
-train <- athens_data_final[train_ind, ] %>% na.omit()
-test <- athens_data_final[-train_ind, ] %>%  na.omit()
+train <- athens_data_final[train_ind, ]
+test <- athens_data_final[-train_ind, ]
 ```
 
-> Then we run our first regression. To choose a model we will use Akaike's information criterion, which tells us about the significance of our finding. 
+> Then we run our first regression. To choose a model we will use Akaike's information criterion, which tells us about the significance of our finding and lets us choose among different number of variables. 
 
 ```{r}
 library(stats)
@@ -700,24 +702,24 @@ model1 %>% AIC() # 13241
 # Multivariate Regression
 # Model 2
 
-model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
+modelh <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
              data=na.omit(train))
 
-summary(model2) 
-summary(model2)$r.squared # R2 0.254
+summary(modelh) 
+summary(modelh)$r.squared # R2 0.254
 
-model2 %>% AIC() # 13151
+modelh %>% AIC() # 13151
 ```
 
 > Both the r2 and the AIC is smaller with this model, which means that the previous one would be preferred
 
 ```{r}
-model2 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
+model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
 
-summary(model2) 
-summary(model2)$r.squared # R2 0.331
+summary(model3) 
+summary(model3)$r.squared # R2 0.331
 
-model2 %>% AIC() # 12240
+model3 %>% AIC() # 12240
 ```
 
 > Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
@@ -766,7 +768,7 @@ model5 %>% AIC() # 5575
 
 ```{r}
 # Model 6
-model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
+model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
              data=na.omit(train))
 
 summary(model6) 
@@ -780,7 +782,6 @@ model6 %>% AIC() # 5092
 > We now plot a graph showing the distribution of the residuals
 
 ```{r}
-
 ggplot(model4, aes(x = .fitted, y = .resid)) + 
   geom_point() +
   labs(title = "Residuals vary around zero") +
@@ -788,16 +789,43 @@ ggplot(model4, aes(x = .fitted, y = .resid)) +
   xlab("")
 ```
 
+### Statistical tests
+
+> Because of our data is dependent on human actions, we are going to test if the variance is constant in our model. If not, then we will correct for this using robust standard errors.
+
+```{r}
+# Heteroscedasticity
+
+ols_test_breusch_pagan(model6)
+
+# The test tells us that the variance is not constant accross our sample, therefore we will use robust standard errors.
+
+lmrob_control <-lmrob.control()
+lmrob_control$fast.s.large.n <- Inf
+
+model6_rob <- lmrob(log(price) ~ 
+                      as.factor(accommodates) + room_type + bathrooms  +
+                      as.factor(neighbourhood) * cent_dist + review_scores_rating *
+                      reviews_per_month, 
+      data=na.omit(train),
+      control=lmrob_control)
+
+summary(model6_rob) 
+summary(model6_rob)$r.squared #R2 0.601
+```
+
+> We in fact had heteroscedasticity in our model and with the new standard errors our model's R2 improved to be ~59%
+
 ### Error analysis
 
-> Choose models with the lowest MSPE (mean squared prediction error)
+> Test our models with MSPE (mean squared prediction error)
 
 ```{r}
 
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
 # Model 2
-mean((log(test$price) - predict.lm(model2, test)) ^ 2, na.rm=T)
+mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
 # Model 3
 mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
 # Model 4
@@ -806,6 +834,9 @@ mean((log(test$price) - predict.lm(model4, test)) ^ 2, na.rm=T)
 mean((log(test$price) - predict.lm(model5, test)) ^ 2, na.rm=T)
 # Model 6
 mean((log(test$price) - predict.lm(model6, test)) ^ 2, na.rm=T)
+
+# Model 6 with Robust standard errors
+mean((log(test$price) - predict.lm(model6_rob, test)) ^ 2, na.rm=T)
 
 # Our final model beats any other model on our test data also
 ```
@@ -829,7 +860,7 @@ We used stepwise method to look for the lowest possible AIC model, but it contai
 First let's visualize is our errors could be explained by their location
 
 ```{r}
-pred_price <- exp(predict(model6, test, se.fit = TRUE)$fit)
+pred_price <- exp(predict(model6_rob, test, se.fit = TRUE)$fit)
 
 pred_test <- test %>% 
   cbind(pred_price) %>% 
@@ -855,7 +886,7 @@ pred_friend <- test %>%
     accommodates == 2
   )
 
-ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6, pred_friend, se.fit = TRUE)$fit))) +
+ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6_rob, pred_friend, se.fit = TRUE)$fit))) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Our model predicts well most of the prices, except some extreme prices",
@@ -864,7 +895,8 @@ ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6, pred_friend, se.fit 
   xlab("Actual price")
 ```
 
-> The predicted price was €42.39 with a 95% confidence interval from **€39.97** to **€44.96**.
+
+> The predicted price was €42.09 with a 95% confidence interval from **€39.46** to **€44.97**.
 
 
 ## Create your own predictions
@@ -904,7 +936,7 @@ server <- function(input,output){
   
   output$table <- renderTable({
     
-    table <- predict(model6, newdata = dat(), 
+    table <- predict(model6_rob, newdata = dat(), 
                                         interval = "confidence") %>% 
       exp() %>% 
       data.frame() %>%
@@ -926,7 +958,7 @@ server <- function(input,output){
     bathrooms_str <- paste0("Bathrooms:", input$bathrooms, sep=" ")
     
     ggplot(data=reac_data, aes(x=price, 
-                           y=exp(predict(model6, reac_data, se.fit = TRUE)$fit))) +
+                           y=exp(predict(model6_rob, reac_data, se.fit = TRUE)$fit))) +
       geom_point() +
       geom_abline(intercept = 0, slope = 1) +
       labs(title = "Prediction vs. Actual prices in Athene",
