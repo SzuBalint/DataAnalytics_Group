@@ -395,29 +395,7 @@ athens_map +
        subtitle = "Centre - Syntagma Square")
 ```
 
-> According to the graph there seems to be a connection between the price and the distance to the center. We will now try to calculate the distance to the center and try to see if the colors of the two graphs fit.  
-
-
-```{r Distance plot}
-# Calculate the distance
-athens_data_final<- athens_data_final %>% 
-  rowwise() %>% 
-  mutate(
-    cent_dist = distm(c(latitude, longitude), c(37.975344, 23.73472), 
-                      fun = distHaversine)[1,1]
-  )
-
-# Test if our numbers are correct visually
-athens_map +
-  geom_point(data=athens_data_final, aes(x = longitude, y = latitude, color = cent_dist)) +
-  geom_point(aes(x = syntagma['latitude'], syntagma['longitude']), color = 'red', size = 5) +
-  map_theme +
-  labs(title = "Locations seem to impact the prices of the airbnbs - same pattern as above" , subtitle = "Distance from center in meters")
-
-```
-
-> If we compare this graph to the graph above, we can indeed see that the same regions tend to have the same colors. Therefore we conclude that the location will indeed have an impact on the price of the airbnbs and that Airbnbs located in nearer in the center tend to have on average a higher price. 
-
+> According to the graph there seems to be a connection between the price and the distance to the center. 
 
 > Next we are going to explore if based on location there are differences in room types. We expect to have center locations to have on average smaller offerings (e.g. shared rooms)
 
