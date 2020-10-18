@@ -1,6 +1,6 @@
 ---
 title: "Group project - Athen Airbnbs"
-author: "Group 19: Daniel Zeiner, Balint XXX, Tao XXX, Mayssa XXX, Eudald XXX"
+author: "Group 19: Daniel Zeiner, Balint Szutor, Tao XXX, Mayssa XXX, Eudald XXX"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -11,6 +11,7 @@ output:
     toc_float: yes
     code_folding: show
 ---
+
 
 ```{r, setup knit, echo=FALSE}
 knitr::opts_chunk$set(
@@ -938,4 +939,3 @@ server <- function(input,output){
   
 shinyApp(ui, server)
 ```
-
