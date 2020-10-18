@@ -65,12 +65,19 @@ theme_update(axis.text.x = element_text(colour= lbs_blue,
 
 ## Introduction
 
-
-
+Our group project focuses on the analysis of the Airbnb data from Athens [AirBnB dataset](http://data.insideairbnb.com/greece/attica/athens/2020-06-16/data/listings.csv.gz). In our project we will perform *Data Cleaning*, *Exploratory Data Analysis*, *Data visualizations* and finally a *Regression Analysis*. The final output of all the analysis and the final regression model is a multivariate regression model that predicts the nightly cost per stay based on distance from center, number of accomodates and number of bathrooms necessary. We built an interactive dashboard, which allows you to adjust the settings should your preferences change.
 
 ## Summary of key findings
 
+The dataset from Airbnb contained a vast amount of information which allows the development of an extensive range of insights into the operations of Airbnb in Athens. We **eliminated ~65 of the columns** in the dataset (the ones which added no value to the analysis or were not related the regression model we were asked to set up). We also had to convert a number of the columns into workable data as many **numeric values** were stored as strings. Furthermore, we analyzed the data even further and adjusted **unnecessary NA values** and **extreme outliers**, which depressed the overall quality of the remaining dataset. 
 
+After building a workable dataset, the data was explored and **tested many hypothesis** which we discussed at the start of the project. In order to develop a better understand about relationship and the outcomes of our analysis we created **appealing visualisations**. We observed that there is a relationship between the average price of a night and the **distance from the center**. The property information was overlaid onto a map of Athens to provide a visual aid to understand the distribution of AirBnb properties and their prices throughout the city. Moreover, we experienced that there is no significant price difference between the **room types**, if you adjust the price with the number of accomodates it can carry. Finally, we tried to identify the major factors of the general rating of the Airbnbs. Interestingly, neither the price nor the response time of the host played a major role in this, however, we discovered a relationship with the **"Superhost" status**. Therefore, superhosts seem to have really strict requirements and the status reflects the overall good quality and experience of the stay. 
+
+In order to narrow down the variables to include in the regression models, we built a **correlation heatmap** (in which we included ~10 different variables). We found out that there were many variables highly correlated with the such as the **distance from the center**, the **number of accomodates**, and the **number of bathrooms**.  We were quite surprised that the **superhost status** (although the status definitely impacts the rating), has nearly no relationship with the price, which can be achieved. 
+
+The regression model was developed through iteration and the final model's independent variables were **Distance (corrected with neighbourhoods)**, **number of accomodates**, **Roomtype**, **Bathrooms**, **Bedrooms** and **Review Score (as proxy for demand)** which has a R^2 value of **0.547** and and AIC of **5,092**. Although some of these variables are intercorrelated with each other, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. It is nice if it can fit 10 accomodates, however if everybody needs to sleep in the same room, the price will probably be negatively adjusted. Especially if you travel with friends these factors play a role individually, why we shouldn't drop them in the analysis.
+
+Our final regression model was used to predict the price for 2 people to rent a property with within 1,500m in the center. As we are only two person, we didn't care about the number of bathrooms and bedrooms. The predicted price was €42.39 with a 95% confidence interval from **€39.97** to **€44.96**.
 
 
 # Initial data analysis
@@ -88,18 +95,19 @@ glimpse(athens_data)
 skim(athens_data)
 ```
 
-> Based on our initial data analysis we identified 4 major types of variables in the underlying data set: 
+Based on our initial data analysis we identified 4 major types of variables in the underlying data set: 
+
 1) Character values: 47
 2) Date values: 5
 3) Logical values: 15
 4) Numeric values: 39
 
-> We also have seen that we have 11,314 observations (apartments) & a total of 106 data points per apartment. 
+We also have seen that we have 11,314 observations (apartments) & a total of 106 data points per apartment. 
 
 
 ### Reducing the dataset 
 
-> We identified many variables that have a characteristic which make them either not interesting to analyze (e.g. only one/ very few distinct values or text strings) or that we think we will not use in the analysis later on. 
+We identified many variables that have a characteristic which make them either not interesting to analyze (e.g. only one/ very few distinct values or text strings) or that we think we will not use in the analysis later on. 
 --> So we excluded these columns/ data points in order to make the data easier & faster to handle.
 
 
@@ -158,9 +166,10 @@ athens_data_red <- athens_data %>%
 
 ### Adjust data values
 
-> In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
+In a next step we will adjust the type of some variables so that we can actually can work with the data more easily. 
 * We transform the price, weekly price, monthly price, security deposit, cleaning fee, extra people, host response rate and host acceptance rate from character variables to numeric ones
 * We create factor variables for Property type, room types, cancellation policy and host response time 
+
 
 > Transforming character values to numeric values
 
@@ -178,8 +187,6 @@ athens_data_clean <- athens_data_red %>%
      host_acceptance_rate = as.numeric(str_remove_all(cleaning_fee, "[% ,]"))
      )
 ```
-
-
 
 > Transforming character values to factor values  
 
@@ -246,10 +253,10 @@ athens_data_clean <- athens_data_clean %>%
 
 ### Readjust NA values 
 
-> In a this step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
-* If no *weekly price* -> no discount -> we will insert the daily price multiplied by 7
-* If no *monthly price* -> no discount -> we will insert the daily price multiplied by 30
-* If no *security deposit/ cleaning fee* -> no fee -> we will insert 0
+In a this step we will further manipulate the data set. In specific we will correct the NA values in cases in which we can estimate the value. 
+* If no **weekly price** -> no discount -> we will insert the daily price multiplied by 7
+* If no **monthly price** -> no discount -> we will insert the daily price multiplied by 30
+* If no **security deposit/ cleaning fee** -> no fee -> we will insert 0
 
 
 ```{r}
@@ -276,7 +283,7 @@ athens_data_clean <- athens_data_clean %>%
 
 ### Readjust outliers
 
-> We will screen the most important variable *price*, which we need in our analysis later on, for potential outliers. We will exclude the extreme values, which make no sense economically (way too high prices). Reasons which could explain these extremly high prices are *unwillingness to list at the moment*, *fake listings* or *extremly luxurious apartments*. 
+We will screen the most important variable *price*, which we need in our analysis later on, for potential outliers. We will exclude the extreme values, which make no sense economically (way too high prices). Reasons which could explain these extremly high prices are *unwillingness to list at the moment*, *fake listings* or *extremly luxurious apartments*. 
 
 > We will start with a quick plot to see if we have outliers in the price data
 
@@ -335,7 +342,7 @@ athens_data_final <- athens_data_clean %>%
 
 ```
 
-> We finally derived our final data set with which we can start with the analysis part of the project. 
+We finally derived our final data set with which we can start with the analysis part of the project. 
 * We reduced the relevant columns to 41
 * We reduced the relevant data points (without outliers) to 11,227
 * We readjusted many data types
@@ -343,9 +350,9 @@ athens_data_final <- athens_data_clean %>%
 * We analyzed outliers and removed them
 
 
-## First analysis of data
+## Exploratory Data Analysis (EDA) & data visualisation
 
-> As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
+As we now have finally derived with a data set, which has only the *relevant values*, *right variable types*, *adjusted NA values* and is *corrected for outliers*, we can finally start with the analysis of the data. 
 
 ### Analysis on location 
 
@@ -531,7 +538,7 @@ athens_data_final %>%
 
 ### Analysis of room type
 
-> We haven't yet analyzed the room type. However, we have the hypothesis that the room type will impact the price which can be achieved with an apartment. 
+We haven't yet analyzed the room type. However, we have the hypothesis that the room type will impact the price which can be achieved with an apartment. 
 
 > Is there a difference in price among room types?
 
@@ -555,7 +562,7 @@ athens_data_final %>%
 
 > First we were quite confused that private rooms are on average more expensive than the apartments. However after having a look of the quanitity of the room types we identified that apartments are way more common than shared rooms. As the overall data quantity is so little compared to apartments, it's likely that outliers adjust the price upwards. It makes sense that shared rooms are really cheap, in the rante between 10 and 30 Euro per night. 
 
-We will now conduct the same analysis but adjust (like above) the price by the amount of persons the apartment can carry. We expect the results to be more equally distributed. 
+> We will now conduct the same analysis but adjust (like above) the price by the amount of persons the apartment can carry. We expect the results to be more equally distributed. 
 
 
 ```{r}
@@ -578,11 +585,14 @@ athens_data_final %>%
 
 
 ```
+
 > We saw that although the total room price for apartments is higher than the one for shared rooms & hotel rooms in total, the price difference is smaller if you account for the number of accomodates which can be fit in one apartment. Now the median price per person is nearly identical among these 3 categories. Private rooms are still an outlier, but we think it is due to the same reasoning as above. 
 
-## Model
+## Building our model
 
-We will try to find the best fitting model to predict per night prices
+### Correlation analyis
+
+> We will try to find the best fitting model to predict per night prices. Therefore the first step is to analyze potential regressions with the price to deduct the key drivers of this variable. We will start with a simple line chart showing the absolute correlation with the price variable. 
 
 ```{r}
 athens_data_final %>% 
@@ -599,18 +609,24 @@ athens_data_final %>%
   xlab("Correlation") +
   labs(title = "Distance from central is the most negative correlation",
        subtitle = "Correlations with price")
+```
 
+> Next we also want to explore potential intercorrelations for the most promising variables. We therefore will cut the datapoints with a low/ no correlation and create a correlation heatmap for the other ones. 
+
+```{r}
 athens_data_final %>% 
+  # reducing the dataset in order to make it more readable
   select(cent_dist, price, accommodates, bedrooms, bathrooms, host_is_superhost, beds, cleaning_fee) %>% 
   na.omit() %>% 
   cor() %>% 
   round(2) %>% 
   melt() %>% 
   mutate(
+    # Renaming in order to make the graph more readable
     Var1 = case_when(
       Var1 == "cent_dist" ~ "Distance from centre",
       Var1 == "price" ~ "Price",
-      Var1 == "accommodates" ~ "Accommodation",
+      Var1 == "accommodates" ~ "Accommodates",
       Var1 == "bedrooms" ~ "Number of bedrooms",
       Var1 == "bathrooms" ~ "Number of bathrooms",
       Var1 == "host_is_superhost" ~ "Superhost",
@@ -619,7 +635,7 @@ athens_data_final %>%
     Var2 = case_when(
       Var2 == "cent_dist" ~ "Distance from centre",
       Var2 == "price" ~ "Price",
-      Var2 == "accommodates" ~ "Accommodation",
+      Var2 == "accommodates" ~ "Accommodates",
       Var2 == "bedrooms" ~ "Number of bedrooms",
       Var2 == "bathrooms" ~ "Number of bathrooms",
       Var2 == "host_is_superhost" ~ "Superhost",
@@ -628,6 +644,7 @@ athens_data_final %>%
     )%>% 
   ggplot(aes(Var2, Var1, fill = value))+
   geom_tile(color = "white")+
+  # adjust the colors 
   scale_fill_gradient2(low = lbs_blue, high = lbs_pink, mid = "white", 
                        midpoint = 0, limit = c(-1,1), space = "Lab", 
                        name="Correlation") +
@@ -639,12 +656,14 @@ athens_data_final %>%
   ylab("")
 ```
 
-Using correlations doesnt seem to work too well, we will need to find another way
+> As we can see there are many variables with have a high correlation with each other. Although some of these variables are intercorrelated, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. It is nice if it can fit 10 accomodates, however if everybody needs to sleep in the same room, the price will probably be negatively adjusted. Especially if you travel with friends these factors play a role individually, why we shouldn't drop them in the analysis. 
+ 
 
 ### Possible models
 
+> First we will split our data into a training and testing set
+
 ```{r}
-# First we will split our data into a training and testing set
 # Set seed so we will get the same results
 set.seed(202019)
 
@@ -655,11 +674,10 @@ train <- athens_data_final[train_ind, ] %>% na.omit()
 test <- athens_data_final[-train_ind, ] %>%  na.omit()
 ```
 
-OLS
+> Then we run our first regression. To choose a model we will use Akaike's information criterion, which tells us about the significance of our finding. 
+
 ```{r}
 library(stats)
-
-# To choose a model we will use Akaike's information criterion
 
 # Univariate regression
 
@@ -673,12 +691,12 @@ summary(model1)
 summary(model1)$r.squared # R2 0.247
 
 model1 %>% AIC() # 13241
+```
 
+> Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
 
+```{r}
 # Multivariate Regression
-
-# Judging by the correlations we can predict which variables might have a bigger impact, now we will use how many people the airbnb accomodates and how many bedrooms there are
-
 # Model 2
 
 model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
@@ -688,20 +706,23 @@ summary(model2)
 summary(model2)$r.squared # R2 0.254
 
 model2 %>% AIC() # 13151
+```
 
-# Both the r2 and the AIC is smaller with this model, which means that the previous one would be prefered
+> Both the r2 and the AIC is smaller with this model, which means that the previous one would be preferred
 
+```{r}
 model2 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
 
 summary(model2) 
 summary(model2)$r.squared # R2 0.331
 
 model2 %>% AIC() # 12240
+```
 
-# Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
+> Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
 
+```{r}
 # Model 3
-
 model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type,
              data=na.omit(train))
 
@@ -710,11 +731,12 @@ summary(model3)$r.squared #R2 0.362
 
 model3 %>% AIC() # 11846
 
-# Room types will impact prices, as people would pay a premium for better acommendation, threfore with the room types we could improve our model also.
+```
 
+> Room types will impact prices, as people would pay a premium for better acommendation, threfore with the room types we could improve our model also.
 
+```{r}
 # Model 4
-
 model4 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist, 
              data=na.omit(train))
 
@@ -722,11 +744,12 @@ summary(model4)
 summary(model4)$r.squared # R2 0.379
 
 model4 %>% AIC() # 11616
+```
 
-# In this model we try to implement our distance variable, and more information about the flats. Although our model has higher R2 and AIC, it did not have a big effect
+> In the next model we try to implement our distance variable, and more information about the flats. Although our model has higher R2 and AIC, it did not have a big effect. 
 
+```{r}
 # Model 5
-
 model5 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist + as.factor(neighbourhood) * cent_dist, 
              data=na.omit(train))
 
@@ -734,13 +757,14 @@ summary(model5)
 summary(model5)$r.squared # R2 0.507
 
 model5 %>% AIC() # 5575
+```
 
-# With the interaction between the distance and neigbourhood we achived our biggest improvement yet. Distance is important during flat hunting, but the neighbourhood also plays a huge role.
+> With the interaction between the distance and neigbourhood we achived our biggest improvement yet. Distance is important during flat hunting, but the neighbourhood also plays a huge role.
 
+> In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for the demand of that airbnb.
+
+```{r}
 # Model 6
-
-# In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for the demand of that airbnb.
-
 model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
              data=na.omit(train))
 
@@ -748,8 +772,13 @@ summary(model6)
 summary(model6)$r.squared #R2 0.547
 
 model6 %>% AIC() # 5092
+```
 
-# With these adjustments our model our model outperforms any other model we tried, and is still fairly understandable. Our R2 is around 55%, and our Akaike infromation criterion is  5092, which is much lower than our first tries which were around 12000. 
+> With these adjustments our model our model outperforms any other model we tried, and is still fairly understandable. Our R2 is around 55%, and our Akaike infromation criterion is  5092, which is much lower than our first tries which were around 12000.
+
+> We now plot a graph showing the distribution of the residuals
+
+```{r}
 
 ggplot(model4, aes(x = .fitted, y = .resid)) + 
   geom_point() +
@@ -758,10 +787,11 @@ ggplot(model4, aes(x = .fitted, y = .resid)) +
   xlab("")
 ```
 
-## Error analysis
+### Error analysis
+
+> Choose models with the lowest MSPE (mean squared prediction error)
 
 ```{r}
-# Choose models with the lowest MSPE (mean squared prediction error)
 
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
@@ -782,15 +812,15 @@ mean((log(test$price) - predict.lm(model6, test)) ^ 2, na.rm=T)
 
 We used stepwise method to look for the lowest possible AIC model, but it contained variables which would be hard to defend logically
 
-*full.model <- lm(log(price) ~., data = na.omit(train))*
+* *full.model <- lm(log(price) ~., data = na.omit(train))*
 
-*step.model <- stepAIC(full.model, direction = "both",*
+* *step.model <- stepAIC(full.model, direction = "both",*
                       *trace = FALSE)*
 
-*step.model %>% summary() %>%*
+* *step.model %>% summary() %>%*
   *select(coefficients)*
 
-*as.data.frame(summary(step.model)$coefficients) %>%*
+* *as.data.frame(summary(step.model)$coefficients) %>%*
   *arrange(Estimate)*
 
 # Final predictions
@@ -832,6 +862,9 @@ ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6, pred_friend, se.fit 
   ylab("Predicted price") +
   xlab("Actual price")
 ```
+
+> The predicted price was €42.39 with a 95% confidence interval from **€39.97** to **€44.96**.
+
 
 ## Create your own predictions
 
