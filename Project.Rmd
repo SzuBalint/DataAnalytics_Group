@@ -45,6 +45,7 @@ library(GGally)
 library(skimr)
 library(reshape2)
 library(olsrr)
+library(robustbase)
 library(reticulate)
 
 lbs_pink = "#C8102E"
@@ -702,16 +703,16 @@ model1 %>% AIC() # 13241
 # Multivariate Regression
 # Model 2
 
-modelh <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
+model2 <- lm(log(price) ~ as.factor(accommodates) + bedrooms, 
              data=na.omit(train))
 
-summary(modelh) 
-summary(modelh)$r.squared # R2 0.254
+summary(model2) 
+summary(model2)$r.squared # R2 0.254
 
-modelh %>% AIC() # 13151
+model2 %>% AIC() # 13151
 ```
 
-> Both the r2 and the AIC is smaller with this model, which means that the previous one would be preferred
+> Both the r2 and the AIC is smaller with this model, which means that the this one would be preferred
 
 ```{r}
 model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist, data=na.omit(train))
@@ -722,67 +723,69 @@ summary(model3)$r.squared # R2 0.331
 model3 %>% AIC() # 12240
 ```
 
-> Our r2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
+> Our R2 is much better now, and our Akaike criterion also droped by quite a big margin. This is likely due to the fact, that the distance from the center is a big factor when people price airbnbs
 
 ```{r}
-# Model 3
-model3 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type,
+# Model 4
+model4 <- lm(log(price) ~ as.factor(accommodates) + cent_dist + room_type,
              data=na.omit(train))
 
-summary(model3) 
-summary(model3)$r.squared #R2 0.362
+summary(model4) 
+summary(model4)$r.squared #R2 0.362
 
-model3 %>% AIC() # 11846
+model4 %>% AIC() # 11846
 
 ```
 
 > Room types will impact prices, as people would pay a premium for better acommendation, threfore with the room types we could improve our model also.
 
 ```{r}
-# Model 4
-model4 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist, 
+# Model 5
+model5 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist, 
              data=na.omit(train))
 
-summary(model4) 
-summary(model4)$r.squared # R2 0.379
+summary(model5) 
+summary(model5)$r.squared # R2 0.379
 
-model4 %>% AIC() # 11616
+model5 %>% AIC() # 11616
 ```
 
 > In the next model we try to implement our distance variable, and more information about the flats. Although our model has higher R2 and AIC, it did not have a big effect. 
 
 ```{r}
-# Model 5
-model5 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist + as.factor(neighbourhood) * cent_dist, 
+# Model 6
+model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bedrooms + bathrooms  + cent_dist + as.factor(neighbourhood) * cent_dist, 
              data=na.omit(train))
 
-summary(model5) 
-summary(model5)$r.squared # R2 0.507
+summary(model6) 
+summary(model6)$r.squared # R2 0.507
 
-model5 %>% AIC() # 5575
+model6 %>% AIC() # 5575
 ```
 
 > With the interaction between the distance and neigbourhood we achived our biggest improvement yet. Distance is important during flat hunting, but the neighbourhood also plays a huge role.
 
-> In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for the demand of that airbnb.
-
 ```{r}
-# Model 6
-model6 <- lm(log(price) ~ as.factor(accommodates) + room_type + bathrooms  + as.factor(neighbourhood) * cent_dist + review_scores_rating * reviews_per_month, 
+# Model 7
+model7 <- lm(log(price) ~ as.factor(accommodates) + room_type + bathrooms  +
+               as.factor(neighbourhood) * cent_dist + 
+               review_scores_rating * reviews_per_month, 
              data=na.omit(train))
 
-summary(model6) 
-summary(model6)$r.squared #R2 0.547
+summary(model7) 
+summary(model7)$r.squared #R2 0.54
 
-model6 %>% AIC() # 5092
+model7 %>% AIC() # 5184
 ```
 
-> With these adjustments our model our model outperforms any other model we tried, and is still fairly understandable. Our R2 is around 55%, and our Akaike infromation criterion is  5092, which is much lower than our first tries which were around 12000.
+> In our final model we use 2 interactions. One for the distance, which we correct with neighbourhoods, and one for the reviews, where we try to weight the rating and frequency, giving a proxy for the demand of that airbnb.
+
+> With these adjustments our model our model outperforms any other model we tried, and is still fairly understandable. Our R2 is around 54%, and our Akaike infromation criterion is  5184, which is much lower than our first tries which were around 12000.
 
 > We now plot a graph showing the distribution of the residuals
 
 ```{r}
-ggplot(model4, aes(x = .fitted, y = .resid)) + 
+ggplot(model5, aes(x = .fitted, y = .resid)) + 
   geom_point() +
   labs(title = "Residuals vary around zero") +
   ylab("Residual") +
@@ -796,22 +799,22 @@ ggplot(model4, aes(x = .fitted, y = .resid)) +
 ```{r}
 # Heteroscedasticity
 
-ols_test_breusch_pagan(model6)
+ols_test_breusch_pagan(model7)
 
 # The test tells us that the variance is not constant accross our sample, therefore we will use robust standard errors.
 
 lmrob_control <-lmrob.control()
 lmrob_control$fast.s.large.n <- Inf
 
-model6_rob <- lmrob(log(price) ~ 
+model7_rob <- lmrob(log(price) ~ 
                       as.factor(accommodates) + room_type + bathrooms  +
                       as.factor(neighbourhood) * cent_dist + review_scores_rating *
                       reviews_per_month, 
       data=na.omit(train),
       control=lmrob_control)
 
-summary(model6_rob) 
-summary(model6_rob)$r.squared #R2 0.601
+summary(model7_rob) 
+summary(model7_rob)$r.squared #R2 0.589
 ```
 
 > We in fact had heteroscedasticity in our model and with the new standard errors our model's R2 improved to be ~59%
@@ -825,7 +828,7 @@ summary(model6_rob)$r.squared #R2 0.601
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
 # Model 2
-mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
+mean((log(test$price) - predict.lm(model2, test)) ^ 2, na.rm=T)
 # Model 3
 mean((log(test$price) - predict.lm(model3, test)) ^ 2, na.rm=T)
 # Model 4
@@ -834,9 +837,11 @@ mean((log(test$price) - predict.lm(model4, test)) ^ 2, na.rm=T)
 mean((log(test$price) - predict.lm(model5, test)) ^ 2, na.rm=T)
 # Model 6
 mean((log(test$price) - predict.lm(model6, test)) ^ 2, na.rm=T)
+# Model 7
+mean((log(test$price) - predict.lm(model7, test)) ^ 2, na.rm=T)
 
-# Model 6 with Robust standard errors
-mean((log(test$price) - predict.lm(model6_rob, test)) ^ 2, na.rm=T)
+# Model 7 with Robust standard errors
+mean((log(test$price) - predict.lm(model7_rob, test)) ^ 2, na.rm=T)
 
 # Our final model beats any other model on our test data also
 ```
@@ -860,7 +865,7 @@ We used stepwise method to look for the lowest possible AIC model, but it contai
 First let's visualize is our errors could be explained by their location
 
 ```{r}
-pred_price <- exp(predict(model6_rob, test, se.fit = TRUE)$fit)
+pred_price <- exp(predict(model7_rob, test, se.fit = TRUE)$fit)
 
 pred_test <- test %>% 
   cbind(pred_price) %>% 
@@ -886,7 +891,7 @@ pred_friend <- test %>%
     accommodates == 2
   )
 
-ggplot(data=pred_friend, aes(x=price, y=exp(predict(model6_rob, pred_friend, se.fit = TRUE)$fit))) +
+ggplot(data=pred_friend, aes(x=price, y=exp(predict(model7_rob, pred_friend, se.fit = TRUE)$fit))) +
   geom_point() +
   geom_abline(intercept = 0, slope = 1) +
   labs(title = "Our model predicts well most of the prices, except some extreme prices",
@@ -922,21 +927,23 @@ server <- function(input,output){
   
   dat <- reactive({
     
-    data <- pred_friend <- test %>% 
+    data <- pred_friend <- athens_data_final %>% 
       filter(
         cent_dist <= input$cent_dist,
         ifelse(input$bathrooms != "Any", 
                bathrooms == input$bathrooms, 
                bathrooms == bathrooms),
         accommodates == input$accom
-        )
+        ) %>% 
+      na.omit()
     
     return(data)
   })
   
   output$table <- renderTable({
     
-    table <- predict(model6_rob, newdata = dat(), 
+    reac_data <- dat()
+    table <- predict(model7_rob, newdata = reac_data, 
                                         interval = "confidence") %>% 
       exp() %>% 
       data.frame() %>%
@@ -952,13 +959,15 @@ server <- function(input,output){
   output$plot2<-renderPlot({
     
     reac_data <- dat()
+    print(head(reac_data))
+    
     
     acc_str <- paste0("Accomodates:", input$accom, sep=" ")
     cent_str <- paste0("Distance from centre:", input$cent_dist, sep=" ")
     bathrooms_str <- paste0("Bathrooms:", input$bathrooms, sep=" ")
     
     ggplot(data=reac_data, aes(x=price, 
-                           y=exp(predict(model6_rob, reac_data, se.fit = TRUE)$fit))) +
+                           y=exp(predict(model7_rob, reac_data, se.fit = TRUE)$fit))) +
       geom_point() +
       geom_abline(intercept = 0, slope = 1) +
       labs(title = "Prediction vs. Actual prices in Athene",
