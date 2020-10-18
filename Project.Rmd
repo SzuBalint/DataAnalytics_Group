@@ -903,7 +903,7 @@ library(shiny)
 ui <- fluidPage(
   titlePanel(title=h4("Predicted Athene airbnb prices", align="center")),
   sidebarPanel( 
-    numericInput("cent_dist", label="How far from the centre (max value)?", value=1500),
+    numericInput("cent_dist", label="How far from the centre (max meter)?", value=1500),
     numericInput("accom", label="How many people?", value=2),
     selectInput("bathrooms", label="How many bathrooms?", 
                 choices = c("Any", unique(test$bathrooms)))),
