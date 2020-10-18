@@ -400,6 +400,14 @@ athens_map +
 > Next we are going to explore if based on location there are differences in room types. We expect to have center locations to have on average smaller offerings (e.g. shared rooms)
 
 ```{r Room type}
+# Calculate the distance
+athens_data_final<- athens_data_final %>% 
+  rowwise() %>% 
+  mutate(
+    cent_dist = distm(c(latitude, longitude), c(37.975344, 23.73472), 
+                      fun = distHaversine)[1,1]
+  )
+
 # First we calculate the average distance 
 avg_dist <- athens_data_final %>% 
   group_by(neighbourhood) %>% 
