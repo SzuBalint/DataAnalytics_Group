@@ -795,12 +795,12 @@ lmrob_control$fast.s.large.n <- Inf
 
 model7_rob <- lmrob(log(price) ~ 
                       as.factor(accommodates) + room_type + bathrooms  +
-                      as.factor(neighbourhood) * cent_dist + review_scores_rating *
-                      reviews_per_month, 
+                      as.factor(neighbourhood) * cent_dist + 
+                      review_scores_rating * reviews_per_month, 
       data=na.omit(train),
       control=lmrob_control)
 
-summary(model7_rob) 
+summary(model7_rob)
 summary(model7_rob)$r.squared #R2 0.589
 ```
 
@@ -811,7 +811,6 @@ summary(model7_rob)$r.squared #R2 0.589
 > Test our models with MSPE (mean squared prediction error)
 
 ```{r MSPE message=FALSE}
-
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
 # Model 2
