@@ -46,6 +46,7 @@ library(skimr)
 library(reshape2)
 library(olsrr)
 library(reticulate)
+library(robustbase)
 
 lbs_pink = "#C8102E"
 lbs_blue = "#001E62"
@@ -77,7 +78,7 @@ After building a workable dataset, the data was explored and **tested many hypot
 
 In order to narrow down the variables to include in the regression models, we built a **correlation heatmap** (in which we included ~10 different variables). We found out that there were many variables highly correlated with the such as the **distance from the center**, the **number of accomodates**, and the **number of bathrooms**.  We were quite surprised that the **superhost status** (although the status definitely impacts the rating), has nearly no relationship with the price, which can be achieved. 
 
-The regression model was developed through iteration and the final model's independent variables were **Distance (corrected with neighbourhoods)**, **number of accomodates**, **Roomtype**, **Bathrooms**, **Bedrooms** and **Review Score (as proxy for demand)** which has a R^2 value of **0.547** and and AIC of **5,092**. Although some of these variables are intercorrelated with each other, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. It is nice if it can fit 10 accomodates, however if everybody needs to sleep in the same room, the price will probably be negatively adjusted. Especially if you travel with friends these factors play a role individually, why we shouldn't drop them in the analysis.
+The regression model was developed through iteration and the final model's independent variables were **Distance (corrected with neighbourhoods)**, **number of accomodates**, **Roomtype**, **Bathrooms**, **Bedrooms** and **Review Score (as proxy for demand)** which has a R^2 value of **0.54** and and AIC of **5,184**. Although some of these variables are intercorrelated with each other, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. It is nice if it can fit 10 accomodates, however if everybody needs to sleep in the same room, the price will probably be negatively adjusted. Especially if you travel with friends these factors play a role individually, why we shouldn't drop them in the analysis.
 
 Our final regression model was used to predict the price for 2 people to rent a property with within 1,500m in the center. As we are only two person, we didn't care about the number of bathrooms and bedrooms. The predicted price was €42.39 with a 95% confidence interval from **€39.97** to **€44.96**.
 
@@ -800,7 +801,7 @@ ols_test_breusch_pagan(model6)
 
 # The test tells us that the variance is not constant accross our sample, therefore we will use robust standard errors.
 
-lmrob_control <-lmrob.control()
+lmrob_control <- lmrob.control()
 lmrob_control$fast.s.large.n <- Inf
 
 model6_rob <- lmrob(log(price) ~ 
