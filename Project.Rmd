@@ -79,9 +79,9 @@ After building a workable dataset, the data was explored and **tested many hypot
 
 In order to narrow down the variables to include in the regression models, we built a **correlation heatmap** (in which we included ~10 different variables). We found out that there were many variables highly correlated with the such as the **distance from the center**, the **number of accomodates**, and the **number of bathrooms**.  We were quite surprised that the **superhost status** (although the status definitely impacts the rating), has nearly no relationship with the price, which can be achieved. 
 
-The regression model was developed through iteration and the final model's independent variables were **Distance (corrected with neighbourhoods)**, **number of accomodates**, **Roomtype**, **Bathrooms**, **Bedrooms** and **Review Score (as proxy for demand)** which has a R^2 value of **0.54** and and AIC of **5,184**. Although some of these variables are intercorrelated with each other, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. It is nice if it can fit 10 accomodates, however if everybody needs to sleep in the same room, the price will probably be negatively adjusted. Especially if you travel with friends these factors play a role individually, why we shouldn't drop them in the analysis.
+The regression model was developed through iteration and the final model's independent variables were **Distance (corrected with neighbourhoods)**, **number of accomodates**, **Roomtype**, **Bathrooms** and **Review Score (as proxy for demand)** which has a R^2 value of **0.59** and and mean squared prediction error of **0.167**. Although some of these variables are intercorrelated with each other, we argue that it anyways is significant for the total price to include more of the factors, as it e.g. plays a crucial role how the structure of the apartments is. Therefore we included both the #accomodates and the #bathrooms. 
 
-Our final regression model was used to predict the price for 2 people to rent a property with within 1,500m in the center. As we are only two person, we didn't care about the number of bathrooms and bedrooms. The predicted price was €42.39 with a 95% confidence interval from **€39.97** to **€44.96**.
+Our final regression model was used to predict the price for 2 people to rent a property with within 1,500m in the center. As we are only two person, we didn't care about the number of bathrooms and bedrooms.  The predicted price was €42.24 with a 95% confidence interval from **€39.50** to **€45.27**.
 
 
 # Initial data analysis
@@ -887,8 +887,7 @@ ggplot(data=pred_friend, aes(x=price, y=exp(predict(model7_rob, pred_friend, se.
 ```
 
 
-> The predicted price was €42.09 with a 95% confidence interval from **€39.46** to **€44.97**.
-
+> The predicted price was €42.24 with a 95% confidence interval from **€39.50** to **€45.27**.
 
 ## Create your own predictions
 
