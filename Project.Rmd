@@ -810,7 +810,7 @@ summary(model7_rob)$r.squared #R2 0.589
 
 > Test our models with MSPE (mean squared prediction error)
 
-```{r MSPE message=FALSE}
+```{r MSPE message}
 # Model 1
 mean((log(test$price) - predict.lm(model1, test)) ^ 2, na.rm=T)
 # Model 2
@@ -850,7 +850,7 @@ We used stepwise method to look for the lowest possible AIC model, but it contai
 
 First let's visualize is our errors could be explained by their location
 
-```{r Dashboard message=FALSE}
+```{r Dashboard message}
 pred_price <- exp(predict(model7_rob, test, se.fit = TRUE)$fit)
 
 pred_test <- test %>% 
