@@ -1,6 +1,6 @@
 ---
 title: "Group project - Athen Airbnbs"
-author: "Group 19: Daniel Zeiner, Balint Szutor, Tao XXX, Mayssa XXX, Eudald XXX"
+author: "Group 19: Daniel Zeiner, Balint Szutor, Tao Yan, Mayssa Maring, Eudald Jove"
 date: "`r Sys.Date()`"
 output:
   html_document:
